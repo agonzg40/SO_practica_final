@@ -23,7 +23,7 @@ typedef struct{
 typedef struct{
 
 	int ID;
-	int Tipo; //0-
+	int Tipo; //0-junior, 1-medio, 2-senior
 	int Ocupado; //0-Ocupado, 1-Libre
 	pthread_t enfermero; 
 
@@ -102,10 +102,10 @@ int main(int argc, char *argv[]){
 
 void nuevoPaciente(int signal){
 
-	pthread_mutex_lock(&mutexColaPacientes);
-
 	int i = 0;
 	bool anyadido = false;
+
+	pthread_mutex_lock(&mutexColaPacientes);
 
 	while(i<=nPacientes && anyadido == false){
 
@@ -159,10 +159,9 @@ void nuevoPaciente(int signal){
                         writeLogMessage("Sistema", 1, "Solicitud ignorada.");
                         pthread_mutex_unlock(&mutexLog);
 		}
-
-		pthread_mutex_unlock(&mutexColaPacientes);
-
 	}
+	
+	pthread_mutex_unlock(&mutexColaPacientes);
 
 }
 
@@ -174,6 +173,7 @@ void writeLogMessage(char *identifier, int id, char *msg)
         struct tm *tlocal = localtime(&now);
         char stnow[19];
         strftime(stnow, 19, "%d/%m/%y %H:%M:%S", tlocal);
+
         // Escribimos en el log
         logFile = fopen("registroTiempos.log", "a");
         fprintf(logFile, "[%s] %s %d: %s\n", stnow, identifier, id, msg);
