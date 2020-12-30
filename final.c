@@ -467,6 +467,132 @@ void accionesEnfermero(int signal){
 	}
 }
 
+
+void *accionesMedico(void *arg){
+	int i = 0;
+	int tipoAtencion, tiempoEspera, reaccion, masPacientes;
+	int colaPacientesJunior = 0;
+	int colaPacientesMedio = 0;
+	int colaPacientesSenior = 0;
+	bool encontrado = false;
+
+	pthread_mutex_lock(&mutexColaPacientes);
+	//Busco el primer paciente en la cola que ha dado reacción
+	while(i<nPacientes && !encontrado)
+	{
+		if(colaPacientes[i].Atendido == 4)
+		{
+			encontrado = true;
+		}else
+		{
+			i++;
+		}
+	}
+
+	//Si no ha encontrado ningún paciente que haya dado reacción busco pacientes en la cola con más solicitudes
+	if(!encontrado)
+	{
+		//Calculo cuantos pacientes de cada tipo hay esperando
+		for(i = 0; i < nPacientes; i++)
+		{
+			if(colaPacientes[i].Tipo == 0)
+			{
+				colaPacientesJunior++;
+			}
+
+			if(colaPacientes[i].Tipo == 1)
+			{
+				colaPacientesMedio++;
+			}
+
+			if(colaPacientes[i].Tipo == 2)
+			{
+				colaPacientesSenior++;
+			}
+		}
+		
+
+		//Busco que cola ha resultado más grande
+		if(colaPacientesJunior > colaPacientesMedio && colaPacientesJunior > colaPacientesSenior)
+		{
+			masPacientes = 0;
+		}else if(colaPacientesMedio > colaPacientesJunior && colaPacientesMedio > colaPacientesSenior)
+		{
+			masPacientes = 1;
+		}else if(colaPacientesSenior > colaPacientesMedio && colaPacientesSenior > colaPacientesJunior)
+		{
+			masPacientes = 2;
+		}
+
+		//Busco el primer paciente del tipo seleccionado
+		while(i<nPacientes && !encontrado)
+		{
+			if(colaPacientes[i].Tipo == masPacientes)
+			{
+				encontrado = true;
+			}else
+			{
+				i++;
+			}
+		}
+		
+	
+	}
+	
+	//Si ha encontrado un paciente al que atender comienza el proceso de vacunación
+	if(encontrado){
+		//EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE REVISAR FLAG DE ATENDIDO
+		colaPacientes[i].Atendido = 3;
+
+		pthread_mutex_unlock(&mutexColaPacientes);
+		//EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE REVISAR DONDE PONER LA SEMILLA
+		tipoAtencion = calculaAleatorios(0, 99);
+
+		//EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE AÑADIR LOS TIEMPOS DE ESPERA
+		//Tiene todo en regla
+		if(tipoAtencion >= 0 && tipoAtencion < 80)
+		{
+			//tiempoEspera =
+		//Está mal identificado
+		}else if(tipoAtencion >= 80 && tipoAtencion < 90)
+		{
+			//tiempoEspera =
+		//Tiene catarro o gripe
+		}else
+		{
+			//tiempoEspera =
+		}
+		
+		pthread_mutex_lock(&mutexLog);
+            writeLogMessage("Medico", 1, "Comienzo a atender al paciente con reacción");
+		pthread_mutex_unlock(&mutexLog);
+
+		//EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE SUPONGO QUE SEA ASI PERO IDK
+		sleep(5 + tiempoEspera);
+
+		pthread_mutex_lock(&mutexLog);
+            writeLogMessage("Medico", 1, "He acabado de atender al paciente con reacción");
+		pthread_mutex_unlock(&mutexLog);
+
+		//EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE REVISAR DONDE PONER LA SEMILLA
+		reaccion = calculaAleatorios(0, 99);
+
+		//Calculo si ha dado reacción
+		if(reaccion >=0 && reaccion <10){
+			colaPacientes[i].Atendido = 4;
+			//EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE SE VA DEL CONSULTORIO
+		}
+	//Si no  ha encontrado ningún paciente espera 1 segundo antes de buscar otra vez
+	}else
+	{
+		wait(1);
+	}
+
+	//EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE COMO VUELVO A ATENDER
+}
+
+
+
 void accionesEstadistico(int signal){
 
 	bool pacienteEstudio = false;
