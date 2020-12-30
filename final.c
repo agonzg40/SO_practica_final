@@ -324,6 +324,178 @@ void *accionesPaciente(void *arg){
 
 }
 
+void accionesEnfermero(int signal){
+
+	//Variable para pacientes del mismo tipo que su enfermero
+	bool pacienteMTipo = false;
+	//Variable para pacientes de distinto tipo que su enfermero
+	bool pacienteDTipo = false;
+
+	if(Enfermero.ID == 0){
+		int contador = 0;
+		while(i < nPacientes && !pacienteMTipo)
+		{
+			if(colaPacientes[i].Tipo == Enfermero.Tipo){
+				pacienteMTipo = true;
+
+				colaPacientes[i].Atendido = 1;
+				//CALCULAR EL TIEMPO DE REACCION, DIRECTAMENTE O EN UNA FUNCION*********************************************************************
+				//FALTA TIPO DE ATENCION Y A PARTIR DE AHI CALCULOS
+
+				pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Sistema", 1, "Comienza la actividad(ENFERMERO).");
+                        pthread_mutex_unlock(&mutexLog);
+
+                //TIPO ATENCION*******************************************************************************************************************
+                wait(tipoAtencion);
+
+                pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Sistema", 1, "Finaliza la actividad(ENFERMERO).");
+                        pthread_mutex_unlock(&mutexLog);
+
+                pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Sistema", 1, "Finaliza la actividad(ENFERMERO) por...");//Varios tipos*****************************************
+                        pthread_mutex_unlock(&mutexLog);
+
+                colaPacientes.Atendido = 0;
+                contador++;
+
+			}else{
+				pacienteDTipo = true;
+				contador++;
+			}
+
+			if(!pacienteMTipo && !pacienteDTipo){
+				wait(1);
+			}
+
+			if(contador == 5){
+                	wait(5);
+                }
+		}
+		i++;
+	}
+
+	if(Enfermero.ID == 1){
+		int contador = 0;
+		while(i < nPacientes && !pacienteMTipo)
+		{
+			if(colaPacientes[i].Tipo == Enfermero.Tipo){
+				pacienteMTipo = true;
+
+				colaPacientes[i].Atendido = 1;
+				//CALCULAR EL TIEMPO DE REACCION, DIRECTAMENTE O EN UNA FUNCION*********************************************************************
+				//FALTA TIPO DE ATENCION Y A PARTIR DE AHI CALCULOS
+
+				pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Sistema", 1, "Comienza la actividad(ENFERMERO).");
+                        pthread_mutex_unlock(&mutexLog);
+
+                //TIPO ATENCION*******************************************************************************************************************
+                wait(tipoAtencion);
+
+                pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Sistema", 1, "Finaliza la actividad(ENFERMERO).");
+                        pthread_mutex_unlock(&mutexLog);
+
+                pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Sistema", 1, "Finaliza la actividad(ENFERMERO) por...");//Varios tipos*****************************************
+                        pthread_mutex_unlock(&mutexLog);
+
+                colaPacientes.Atendido = 0;
+                contador++;
+
+			}else{
+				pacienteDTipo = true;
+				contador++;
+			}
+
+			if(!pacienteMTipo && !pacienteDTipo){
+				wait(1);
+			}
+
+			if(contador == 5){
+                	wait(5);
+                }
+		}
+		i++;
+	}
+
+	if(Enfermero.ID == 2){
+		int contador = 0;
+		while(i < nPacientes && !pacienteMTipo)
+		{
+			if(colaPacientes[i].Tipo == Enfermero.Tipo){
+				pacienteMTipo = true;
+
+				colaPacientes[i].Atendido = 1;
+				//CALCULAR EL TIEMPO DE REACCION, DIRECTAMENTE O EN UNA FUNCION*********************************************************************
+				//FALTA TIPO DE ATENCION Y A PARTIR DE AHI CALCULOS
+
+				pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Sistema", 1, "Comienza la actividad(ENFERMERO).");
+                        pthread_mutex_unlock(&mutexLog);
+
+                //TIPO ATENCION*******************************************************************************************************************
+                wait(tipoAtencion);
+
+                pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Sistema", 1, "Finaliza la actividad(ENFERMERO).");
+                        pthread_mutex_unlock(&mutexLog);
+
+                pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Sistema", 1, "Finaliza la actividad(ENFERMERO) por...");//Varios tipos*****************************************
+                        pthread_mutex_unlock(&mutexLog);
+
+                colaPacientes.Atendido = 0;
+                contador++;
+
+			}else{
+				pacienteDTipo = true;
+				contador++;
+			}
+
+			if(!pacienteMTipo && !pacienteDTipo){
+				wait(1);
+			}
+
+			if(contador == 5){
+                	wait(5);
+                }
+		}
+		i++;
+	}
+}
+
+void accionesEstadistico(int signal){
+
+	bool pacienteEstudio = false;
+
+	pthread_mutex_lock(&estadistico);
+
+	while(i < nPacientes && !pacienteEstudio)
+	{
+		if(colaPacientes[i].Serologia == 0){
+			pacienteEstudio = true;
+
+			pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Sistema", 1, "Comienza la actividad(estadistico).");
+                        pthread_mutex_unlock(&mutexLog);
+
+            wait(4);
+
+            //USAR VARIABLE CONDICION mutexPacientesEstudio *******************************************************
+
+            pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Sistema", 1, "Finaliza la actividad(estadistico).");
+                        pthread_mutex_unlock(&mutexLog);
+		}
+	}
+	i++;
+
+	pthread_mutex_unlock(&estadistico);
+}
+
 void writeLogMessage(char *identifier, int id, char *msg)
 {
 
