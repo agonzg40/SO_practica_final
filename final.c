@@ -7,15 +7,16 @@
 #include <time.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <string.h>
 
 
 //Estructuras
 typedef struct{
 
 	int ID;
-	int Atendido; //0 - no, 1 - si
+	int Atendido; //0 - no, 1 - si esta siendo atendido, 2 - si ya ha sido atendido, 4 - ha tenido reaccion
 	int Tipo; //Edad de los pacientes, 0-15-junior, 16-59-medio, 60-100 senior, 0 - junior, 1 - medio, 2 - senior
-	int Serologia; // 0-Participan, 1-No
+	int Serologia; // 1-Participan, 0-No
 	pthread_t paciente;
 
 } Pacientes;
@@ -32,7 +33,8 @@ typedef struct{
 //Variables
 
 int contadorPacientes, terminado, nPacientes;
-pthread_mutex_t mutexLog, mutexColaPacientes, mutexPacientesEstudio;
+pthread_mutex_t mutexLog, mutexColaPacientes, mutexPacientesEstudio, mutexAleatorios;
+pthread_cond_t condReaccion, condSerologia, condMarchar;
 
 Pacientes colaPacientes[5];
 
@@ -48,6 +50,7 @@ void *accionesMedico(void *arg);
 void *accionesEstadistico(void *arg);
 void finalizar(int signal);
 void writeLogMessage(char *identifier, int id, char *msg);
+int calculaAleatorios(int min, int max);
 
 
 int main(int argc, char *argv[]){
@@ -69,7 +72,12 @@ int main(int argc, char *argv[]){
 	pthread_mutex_init(&mutexLog, NULL);
 	pthread_mutex_init(&mutexColaPacientes, NULL);
 	pthread_mutex_init(&mutexPacientesEstudio, NULL);
-
+	pthread_mutex_init(&mutexAleatorios, NULL);
+	pthread_cond_init(&condReaccion, NULL);
+	pthread_cond_init(&condSerologia, NULL);
+	pthread_cond_init(&condMarchar, NULL);
+	
+	srand(time(NULL));
 	contadorPacientes = 0;
 	terminado = 0;
 	nPacientes = 5;
@@ -165,6 +173,157 @@ void nuevoPaciente(int signal){
 
 }
 
+void *accionesPaciente(void *arg){
+
+	Pacientes paciente = *((Pacientes *)arg);
+
+	int aleatorio = calculaAleatorios(0, 100); //Calculamos el aleatorio para saber si se cansa de esperar
+	int aleatorio2 = calculaAleatorios(0, 100); //Calculamos el aleatorio para saber si se lo piensa mejor
+	int aleatorio3 = calculaAleatorios(0, 70); //Calculamos el aleatorio del 70 por ciento que queda para saber si se va al baño EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+	int aleatorio4 = calculaAleatorios(0, 100); //Calculamos si el Paciente tiene reaccion
+
+	pthread_mutex_lock(&mutexLog);
+
+	char mensaje[100] = "El paciente es de tipo: ";
+
+	if(paciente.Tipo == 0){ //Comprobamos de que tipo es el paciente para el log
+	
+		strcat(mensaje, "junior");
+
+	}else if(paciente.Tipo == 1){
+
+		strcat(mensaje, "medio");
+	
+	}else{
+
+		strcat(mensaje, "senior");
+	
+	}
+
+        writeLogMessage("Paciente", paciente.ID, "Inicio del paciente");
+	writeLogMessage("Paciente", paciente.ID, mensaje);
+
+        pthread_mutex_unlock(&mutexLog);
+
+	sleep(3);
+
+	pthread_mutex_lock(&mutexColaPacientes);
+
+	while(paciente.Atendido == 0 && paciente.ID != 0){
+
+		pthread_mutex_unlock(&mutexColaPacientes);
+
+		if(aleatorio<=20){ //Se van por cansancio
+
+			pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Paciente", paciente.ID, "Se va de la cola, por espera.");
+                        pthread_mutex_unlock(&mutexLog);
+
+			pthread_mutex_lock(&mutexColaPacientes);
+
+			paciente.ID = 0;//Se libea el espacio de la cola, porque si el ID esta a 0 es como si no estuviera			
+	
+			pthread_mutex_unlock(&mutexColaPacientes);
+	
+			pthread_exit(NULL);
+
+		}else{
+
+			if(aleatorio <= 10){ //Se lo piensa mejor
+			
+				pthread_mutex_lock(&mutexLog);
+	                        writeLogMessage("Paciente", paciente.ID, "Se lo piensa mejor y se va.");
+        	                pthread_mutex_unlock(&mutexLog);
+
+				pthread_mutex_lock(&mutexColaPacientes);
+
+				paciente.ID = 0;//Se libea el espacio de la cola, porque si el ID esta a 0 es como si no estuviera			
+		
+				pthread_mutex_unlock(&mutexColaPacientes);
+		
+				pthread_exit(NULL);	
+
+			}else{
+
+				if(aleatorio3 <= 5){ //Va al baño y pierde el turno
+
+					pthread_mutex_lock(&mutexLog);
+                        		writeLogMessage("Paciente", paciente.ID, "Se va de la cola, por espera.");
+                        		pthread_mutex_unlock(&mutexLog);
+
+					pthread_mutex_lock(&mutexColaPacientes);
+
+					paciente.ID = 0;//Se libea el espacio de la cola, porque si el ID esta a 0 es como si no estuviera			
+	
+					pthread_mutex_unlock(&mutexColaPacientes);
+	
+					pthread_exit(NULL);
+
+				}
+
+			}
+		}
+
+		sleep(3);
+
+		while(paciente.Atendido != 2){ //Esperamos a que haya sido atendido
+
+			sleep(1);
+
+		}
+
+		if(aleatorio4 <= 10){ //Miramos a ver si le da reaccion
+
+			pthread_mutex_lock(&mutexColaPacientes);
+			paciente.Atendido = 4;
+			pthread_mutex_unlock(&mutexColaPacientes);
+
+			//pthread_cond_wait(&condReaccion, NULL);
+
+		}else{ //Si no le da reaccion
+			
+			if(calculaAleatorios(0, 100) <= 25){ //Calculamos si decide participar en el estudio
+
+				pthread_mutex_lock(&mutexColaPacientes);
+				paciente.Serologia = 1;
+				pthread_mutex_unlock(&mutexColaPacientes);
+
+				pthread_cond_signal(&condSerologia);
+
+				pthread_mutex_lock(&mutexLog);
+				writeLogMessage("Paciente", paciente.ID, "Estoy listo para el estudio.");
+                        	pthread_mutex_unlock(&mutexLog);
+
+				//pthread_cond_wait(&condMarchar);
+
+				pthread_mutex_lock(&mutexLog);
+				writeLogMessage("Paciente", paciente.ID, "Me marcho del estudio.");
+                        	pthread_mutex_unlock(&mutexLog);
+
+				pthread_mutex_lock(&mutexColaPacientes);
+				paciente.ID = 0;
+				pthread_mutex_unlock(&mutexColaPacientes);
+
+			}else{
+
+				pthread_mutex_lock(&mutexColaPacientes);
+				paciente.ID = 0;
+				pthread_mutex_unlock(&mutexColaPacientes);
+
+				pthread_mutex_lock(&mutexLog);
+				writeLogMessage("Paciente", paciente.ID, "No participo en el estudio asique me voy.");
+                        	pthread_mutex_unlock(&mutexLog);
+
+			}
+		}
+	}
+	
+	pthread_exit(NULL);
+
+	
+
+}
+
 void writeLogMessage(char *identifier, int id, char *msg)
 {
 
@@ -178,5 +337,15 @@ void writeLogMessage(char *identifier, int id, char *msg)
         logFile = fopen("registroTiempos.log", "a");
         fprintf(logFile, "[%s] %s %d: %s\n", stnow, identifier, id, msg);
         fclose(logFile);
+}
+
+int calculaAleatorios(int min, int max)
+{
+        
+        int aleatorio;
+        pthread_mutex_lock(&mutexAleatorios);
+        aleatorio = rand() % (max - min + 1) + min;
+        pthread_mutex_unlock(&mutexAleatorios);
+        return aleatorio;
 }
 
