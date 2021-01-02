@@ -305,7 +305,7 @@ void *accionesPaciente(void *arg){
 				writeLogMessage("Paciente", paciente.ID, "Estoy listo para el estudio.");
                         	pthread_mutex_unlock(&mutexLog);
 
-				pthread_cond_wait(&condMarchar);
+				//pthread_cond_wait(&condMarchar);
 
 				pthread_mutex_lock(&mutexLog);
 				writeLogMessage("Paciente", paciente.ID, "Me marcho del estudio.");
