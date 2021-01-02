@@ -26,7 +26,6 @@ typedef struct{
 
 	int ID;
 	int Tipo; //0-junior, 1-medio, 2-senior
-	int Ocupado; //0-Ocupado, 1-Libre
 	pthread_t enfermero; 
 
 }Enfermero;
@@ -38,23 +37,27 @@ pthread_mutex_t mutexLog, mutexColaPacientes, mutexEstadistico, mutexAleatorios;
 pthread_cond_t condReaccion, condSerologia, condMarchar;
 
 Pacientes colaPacientes[5];
+Enfermero colaEnfermero[3];
 
 //hilos
 pthread_t medico, estadistico;
 
 FILE *logFile;
 
+void inicializarEnfermeros(int nEnfermeros);
 void nuevoPaciente(int signal);
 void *accionesPaciente(void *arg);
 void *accionesEnfermero(void *arg);
 void *accionesMedico(void *arg);
 void *accionesEstadistico(void *arg);
-void finalizar(int signal);
+//void finalizar(int signal);
 void writeLogMessage(char *identifier, int id, char *msg);
 int calculaAleatorios(int min, int max);
 
 
 int main(int argc, char *argv[]){
+
+	printf("main\n");
 
 	struct sigaction pacienteJunior, pacienteMedio, pacienteSenior, terminar;
 
@@ -62,7 +65,7 @@ int main(int argc, char *argv[]){
 	pacienteMedio.sa_handler = nuevoPaciente;
 	pacienteSenior.sa_handler = nuevoPaciente;
 	
-	terminar.sa_handler = finalizar;
+	//terminar.sa_handler = finalizar;
 
 	sigaction(SIGUSR1, &pacienteJunior, NULL);	//Manejo SIGUSR1 para los pacientes junior
         sigaction(SIGUSR2, &pacienteMedio, NULL);	//Manejo SIGUSR2 para los pacientes Medios
@@ -100,7 +103,7 @@ int main(int argc, char *argv[]){
 	logFile = fopen("registroTiempos.log", "w");
 
 	//Creacion de hilos
-	//EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE ENFERMEROOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOS
+	inicializarEnfermeros(3);
 	pthread_create(&medico, NULL, &accionesMedico, NULL);
 	pthread_create(&estadistico, NULL, &accionesEstadistico, NULL);
 
@@ -109,15 +112,49 @@ int main(int argc, char *argv[]){
         }
 }
 
-void nuevoPaciente(int signal){
+void inicializarEnfermeros(int nEnfermeros){
 
 	int i = 0;
+
+	for(i = 0; i<nEnfermeros; i++){
+
+		pthread_mutex_lock(&mutexColaPacientes);
+
+		if(i == 0){
+
+			colaEnfermero[i].ID = i;
+			colaEnfermero[i].Tipo = 0;
+	
+		}else if(i == 1){
+
+			colaEnfermero[i].ID = i;
+			colaEnfermero[i].Tipo = 1;
+
+		}else if(i == 2){
+
+			colaEnfermero[i].ID = i;
+			colaEnfermero[i].Tipo = 2;
+
+		}
+
+		pthread_create(&colaEnfermero[i].enfermero, NULL, accionesEnfermero, (void *)&colaEnfermero[i]); //Se crea el hilo para ese enfermero
+		pthread_mutex_unlock(&mutexColaPacientes);
+	}
+
+}
+
+void nuevoPaciente(int signal){
+
+	printf("nuevoP\n");
+
+	int i = 0, j;
 	bool anyadido = false;
-
-	pthread_mutex_lock(&mutexColaPacientes);
-
+printf("3\n");
+	j = pthread_mutex_lock(&mutexColaPacientes);
+	printf("%d\n",j);
+printf("2\n");
 	while(i<=nPacientes && anyadido == false){
-
+		printf("1\n");
 		if(colaPacientes[i].ID == 0){
 		
 			contadorPacientes += 1;
@@ -176,6 +213,8 @@ void nuevoPaciente(int signal){
 }
 
 void *accionesPaciente(void *arg){
+
+	printf("accionesP\n");
 
 	Pacientes paciente = *((Pacientes *)arg);
 
@@ -359,6 +398,8 @@ void *accionesPaciente(void *arg){
 }
 
 void *accionesEnfermero(void *arg){
+
+	printf("hola\n");
 
 	Enfermero enfermero = *((Enfermero *)arg);
 
@@ -722,6 +763,8 @@ void *accionesMedico(void *arg){
 	bool encontrado = false;
 	bool pacienteConReaccion;
 
+	printf("hola\n");
+
 	while(1){
 		pthread_mutex_lock(&mutexColaPacientes);
 		//Busco el primer paciente en la cola que ha dado reacción
@@ -838,6 +881,9 @@ void *accionesMedico(void *arg){
 
 
 void *accionesEstadistico(void *arg){
+
+	printf("hola\n");
+
 	int i;
 	pthread_mutex_lock(&mutexEstadistico);
 
@@ -892,4 +938,20 @@ int calculaAleatorios(int min, int max)
         pthread_mutex_unlock(&mutexAleatorios);
         return aleatorio;
 }
+
+/*void finalizar(int signal){
+
+	int i;
+	terminado = 1;
+	pthread_mutex_lock(&mutexColaPacientes);
+	for(i = 0; i<nPacientes; i++){
+
+		colaPacientes[i].ID = 0;
+		//terminar hilos
+	}
+
+	pthread_mutex_unlock(&mutexColaPacientes);
+
+        exit(0);
+}*/
 
