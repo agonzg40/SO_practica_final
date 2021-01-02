@@ -33,7 +33,7 @@ typedef struct{
 //Variables
 
 int contadorPacientes, terminado, nPacientes;
-pthread_mutex_t mutexLog, mutexColaPacientes, mutexEstadistico, mutexAleatorios;
+pthread_mutex_t mutexLog, mutexColaPacientes, mutexEstadistico, mutexAleatorios, mutexColaEnfermero;
 pthread_cond_t condReaccion, condSerologia, condMarchar;
 
 Pacientes colaPacientes[5];
@@ -59,7 +59,7 @@ int main(int argc, char *argv[]){
 
 	printf("main\n");
 
-	struct sigaction pacienteJunior, pacienteMedio, pacienteSenior, terminar;
+	struct sigaction pacienteJunior, pacienteMedio, pacienteSenior;//, terminar
 
 	pacienteJunior.sa_handler = nuevoPaciente;
 	pacienteMedio.sa_handler = nuevoPaciente;
@@ -70,13 +70,14 @@ int main(int argc, char *argv[]){
 	sigaction(SIGUSR1, &pacienteJunior, NULL);	//Manejo SIGUSR1 para los pacientes junior
         sigaction(SIGUSR2, &pacienteMedio, NULL);	//Manejo SIGUSR2 para los pacientes Medios
 	sigaction(SIGPIPE, &pacienteSenior, NULL);	//Manejo SIGPIPE para los pacientes Senior	
-        sigaction(SIGINT, &terminar, NULL);		//Manejo SIGINT para terminar
+        //sigaction(SIGINT, &terminar, NULL);		//Manejo SIGINT para terminar
 
 	//Inicializar Recursos
 	pthread_mutex_init(&mutexLog, NULL);
 	pthread_mutex_init(&mutexColaPacientes, NULL);
 	pthread_mutex_init(&mutexEstadistico, NULL);
 	pthread_mutex_init(&mutexAleatorios, NULL);
+	pthread_mutex_init(&mutexColaEnfermero, NULL);
 	pthread_cond_init(&condReaccion, NULL);
 	pthread_cond_init(&condSerologia, NULL);
 	pthread_cond_init(&condMarchar, NULL);
@@ -118,7 +119,7 @@ void inicializarEnfermeros(int nEnfermeros){
 
 	for(i = 0; i<nEnfermeros; i++){
 
-		pthread_mutex_lock(&mutexColaPacientes);
+		pthread_mutex_lock(&mutexColaEnfermero);
 
 		if(i == 0){
 
@@ -138,7 +139,7 @@ void inicializarEnfermeros(int nEnfermeros){
 		}
 
 		pthread_create(&colaEnfermero[i].enfermero, NULL, accionesEnfermero, (void *)&colaEnfermero[i]); //Se crea el hilo para ese enfermero
-		pthread_mutex_unlock(&mutexColaPacientes);
+		pthread_mutex_unlock(&mutexColaEnfermero);
 	}
 
 }
@@ -150,7 +151,7 @@ void nuevoPaciente(int signal){
 	int i = 0, j;
 	bool anyadido = false;
 printf("3\n");
-	j = pthread_mutex_lock(&mutexColaPacientes);
+	pthread_mutex_lock(&mutexColaPacientes);
 	printf("%d\n",j);
 printf("2\n");
 	while(i<=nPacientes && anyadido == false){
@@ -226,6 +227,8 @@ void *accionesPaciente(void *arg){
 
 	pthread_mutex_lock(&mutexLog);
 
+	
+
 	char mensaje[100] = "El paciente es de tipo: ";
 
 	if(paciente.Tipo == 0){ //Comprobamos de que tipo es el paciente para el log
@@ -254,7 +257,7 @@ void *accionesPaciente(void *arg){
 	while(paciente.Atendido == 0 && paciente.ID != 0){
 
 		pthread_mutex_unlock(&mutexColaPacientes);
-
+		printf("eEEeeeeeee:%d\n",aleatorio);
 		if(aleatorio<=20){ //Se van por cansancio
 
 			pthread_mutex_lock(&mutexLog);
@@ -414,6 +417,7 @@ void *accionesEnfermero(void *arg){
 	
 
 	if(enfermero.ID == 0){
+		printf("asda\n");
 		//////////////////////////////////////////////////////////////////////////////////////////////////lock
 		pthread_mutex_lock(&mutexColaPacientes);
 
