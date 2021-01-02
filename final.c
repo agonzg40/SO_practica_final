@@ -17,6 +17,7 @@ typedef struct{
 	int Atendido; //0 - no, 1 - si esta siendo atendido, 2 - si ya ha sido atendido, 3 - no ha tenido reaccion, 4 - ha tenido reaccion
 	int Tipo; //Edad de los pacientes, 0-15-junior, 16-59-medio, 60-100 senior, 0 - junior, 1 - medio, 2 - senior
 	int Serologia; // 1-Participan, 0-No
+	int Posicion; //Guarda la posicion en la que se encuentra en la cola
 	pthread_t paciente;
 
 } Pacientes;
@@ -123,6 +124,7 @@ void nuevoPaciente(int signal){
 	
 			colaPacientes[i].ID = contadorPacientes;
 			colaPacientes[i].Atendido = 0;
+			colaPacientes[i].Posicion = i;
 			
 			//Comprobamos la senyal recibida para saber que tipo de paciente es
 			if(signal == SIGUSR1){//El paciente es junior
@@ -181,6 +183,7 @@ void *accionesPaciente(void *arg){
 	int aleatorio2 = calculaAleatorios(0, 100); //Calculamos el aleatorio para saber si se lo piensa mejor
 	int aleatorio3 = calculaAleatorios(0, 70); //Calculamos el aleatorio del 70 por ciento que queda para saber si se va al baño EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
 	int aleatorio4 = calculaAleatorios(0, 100); //Calculamos si el Paciente tiene reaccion
+	int i;
 
 	pthread_mutex_lock(&mutexLog);
 
@@ -278,7 +281,11 @@ void *accionesPaciente(void *arg){
 			paciente.Atendido = 4;
 			pthread_mutex_unlock(&mutexColaPacientes);
 
-			//pthread_cond_wait(&condReaccion, NULL);
+			while(paciente.Atendido !=2){
+
+				sleep(1);		
+	
+			}
 
 		}else{ //Si no le da reaccion
 			
@@ -298,15 +305,13 @@ void *accionesPaciente(void *arg){
 				writeLogMessage("Paciente", paciente.ID, "Estoy listo para el estudio.");
                         	pthread_mutex_unlock(&mutexLog);
 
-				//pthread_cond_wait(&condMarchar);
+				pthread_cond_wait(&condMarchar);
 
 				pthread_mutex_lock(&mutexLog);
 				writeLogMessage("Paciente", paciente.ID, "Me marcho del estudio.");
                         	pthread_mutex_unlock(&mutexLog);
 
-				pthread_mutex_lock(&mutexColaPacientes);
-				paciente.ID = 0;
-				pthread_mutex_unlock(&mutexColaPacientes);
+
 
 			}else{
 
@@ -320,7 +325,32 @@ void *accionesPaciente(void *arg){
 
 			}
 		}
+
+		pthread_mutex_lock(&mutexColaPacientes);
+	
+		if(colaPacientes[paciente.Posicion+1].ID!=0){
+
+			paciente.ID = 0;
+
+		}else{
+
+			for(i = paciente.Posicion; i<nPacientes; i++){
+				if(colaPacientes[i+1].ID!=0){
+					paciente.ID = 0;
+					colaPacientes[i] = colaPacientes[i+1];
+				}else{
+		
+					colaPacientes[i].ID = 0;
+		
+				}
+			}
+		}
+				
+		pthread_mutex_unlock(&mutexColaPacientes);
+
 	}
+
+	
 	
 	pthread_exit(NULL);
 
