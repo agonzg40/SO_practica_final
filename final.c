@@ -26,6 +26,7 @@ typedef struct{
 
 	int ID;
 	int Tipo; //0-junior, 1-medio, 2-senior
+	int nPacientes; //Contador pacientes
 	pthread_t enfermero; 
 
 }Enfermero;
@@ -137,6 +138,8 @@ void inicializarEnfermeros(int nEnfermeros){
 			colaEnfermero[i].Tipo = 2;
 
 		}
+
+		colaEnfermero[i].nPacientes = 0;
 
 		pthread_create(&colaEnfermero[i].enfermero, NULL, accionesEnfermero, (void *)&colaEnfermero[i]); //Se crea el hilo para ese enfermero
 		pthread_mutex_unlock(&mutexColaEnfermero);
@@ -252,11 +255,11 @@ void *accionesPaciente(void *arg){
 
 	sleep(3);
 
-	pthread_mutex_lock(&mutexColaPacientes);
+	//pthread_mutex_lock(&mutexColaPacientes);
 
 	while(paciente.Atendido == 0 && paciente.ID != 0){
 
-		pthread_mutex_unlock(&mutexColaPacientes);
+		//pthread_mutex_unlock(&mutexColaPacientes);
 		printf("eEEeeeeeee:%d\n",aleatorio);
 		if(aleatorio<=20){ //Se van por cansancio
 
@@ -413,18 +416,31 @@ void *accionesEnfermero(void *arg){
 
 	int tipoAtencion;
 	int tiempoEspera;
-	int i;
-	
 
-	if(enfermero.ID == 0){
+	/*while(colaPacientes[0].ID==0){
+
+		sleep(1);
+	}*/
+
+	//pthread_mutex_lock(&mutexColaPacientes);
+
+	int i ;
+	
+	
+	/*while(i<nPacientes){
+
+
+		if(colaPacientes[i].ID!=0){
+
+
+			if(enfermero.ID == 0){
 		printf("asda\n");
 		//////////////////////////////////////////////////////////////////////////////////////////////////lock
 		pthread_mutex_lock(&mutexColaPacientes);
 
 		int contador = 0;
 		i = 0;
-		while(i < nPacientes && !pacienteMTipo)
-		{
+		
 			if(colaPacientes[i].Tipo == enfermero.Tipo){
 				pacienteMTipo = true;
 
@@ -529,8 +545,7 @@ void *accionesEnfermero(void *arg){
                 	sleep(5);
                 }
 
-            i++;
-		}
+           // i++;
 		
 
 	}else if(enfermero.ID == 1){
@@ -540,8 +555,6 @@ void *accionesEnfermero(void *arg){
 		int contador = 0;
 		i = 0;
 
-		while(i < nPacientes && !pacienteMTipo)
-		{
 			if(colaPacientes[i].Tipo == enfermero.Tipo){
 				pacienteMTipo = true;
 
@@ -643,16 +656,14 @@ void *accionesEnfermero(void *arg){
                 	sleep(5);
                 }
 
-            i++;
-		}
+            //i++;
 		
 	}else if(enfermero.ID == 2){
 		pthread_mutex_lock(&mutexColaPacientes);
 		int contador = 0;
 		i = 0;
 
-		while(i < nPacientes && !pacienteMTipo)
-		{
+
 			if(colaPacientes[i].Tipo == enfermero.Tipo){
 				pacienteMTipo = true;
 
@@ -741,6 +752,370 @@ void *accionesEnfermero(void *arg){
                 colaPacientes[i].Atendido = 2;
 				contador++;
 			}
+
+			if(!pacienteMTipo && !pacienteDTipo){
+				sleep(1);
+				i = 0;
+			}
+
+			if(contador == 5){
+                	sleep(5);
+                }
+
+
+		
+		
+	}
+}
+}
+i++;
+}*/
+
+			
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+
+if(enfermero.ID == 0){
+		printf("asda\n");
+		//////////////////////////////////////////////////////////////////////////////////////////////////lock
+		
+
+		int contador = 0;
+		i = 0;
+		while(i < nPacientes && !pacienteMTipo)
+		{
+			printf("la colaPacientes: %d\n",colaPacientes[i].ID);
+		if(colaPacientes[i].ID!=0){
+			if(colaPacientes[i].Tipo == enfermero.Tipo){
+				pthread_mutex_lock(&mutexColaPacientes);
+				pacienteMTipo = true;
+
+				colaPacientes[i].Atendido = 1;
+				//CALCULAR EL TIEMPO DE REACCION, DIRECTAMENTE O EN UNA FUNCION*********************************************************************
+				//FALTA TIPO DE ATENCION Y A PARTIR DE AHI CALCULOS
+
+				pthread_mutex_unlock(&mutexColaPacientes);
+
+				////////////////////////////////////////////////////////////////////////////////////unlock
+
+				tipoAtencion = calculaAleatorios(1, 100);
+
+				//Tiene todo en regla
+				if(tipoAtencion <= 80)
+				{
+					tiempoEspera = calculaAleatorios(1, 4);
+				//Está mal identificado
+				}else if(tipoAtencion > 80 && tipoAtencion <= 90)
+				{
+					tiempoEspera = calculaAleatorios(2, 6);
+				//Tiene catarro o gripe
+				}else
+				{
+					tiempoEspera = calculaAleatorios(6, 10);
+				}
+
+				////////////////////////////////////////////////////////////////////////////////////unlock
+
+				pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Enfermero", enfermero.ID, "Comienza la actividad.");
+                        pthread_mutex_unlock(&mutexLog);
+
+                //TIPO ATENCION*******************************************************************************************************************
+                sleep(tiempoEspera);
+
+                pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad.");
+                        pthread_mutex_unlock(&mutexLog);
+
+                pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad por...");//Varios tipos*****************************************
+                        pthread_mutex_unlock(&mutexLog);
+
+                colaPacientes[i].Atendido = 2;
+                contador++;
+
+			}else{
+				pacienteDTipo = true;
+				colaPacientes[i].Atendido = 1;
+				//CALCULAR EL TIEMPO DE REACCION, DIRECTAMENTE O EN UNA FUNCION*********************************************************************
+				//FALTA TIPO DE ATENCION Y A PARTIR DE AHI CALCULOS
+
+				pthread_mutex_unlock(&mutexColaPacientes);
+
+				////////////////////////////////////////////////////////////////////////////////////unlock
+
+				tipoAtencion = calculaAleatorios(1, 100);
+
+				//Tiene todo en regla
+				if(tipoAtencion <= 80)
+				{
+					tiempoEspera = calculaAleatorios(1, 4);
+				//Está mal identificado
+				}else if(tipoAtencion > 80 && tipoAtencion <= 90)
+				{
+					tiempoEspera = calculaAleatorios(2, 6);
+				//Tiene catarro o gripe
+				}else
+				{
+					tiempoEspera = calculaAleatorios(6, 10);
+				}
+
+				////////////////////////////////////////////////////////////////////////////////////unlock
+
+				pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Enfermero", enfermero.ID, "Comienza la actividad.");
+                        pthread_mutex_unlock(&mutexLog);
+
+                //TIPO ATENCION*******************************************************************************************************************
+                sleep(tiempoEspera);
+
+                pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad.");
+                        pthread_mutex_unlock(&mutexLog);
+
+                pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad por...");//Varios tipos*****************************************
+                        pthread_mutex_unlock(&mutexLog);
+
+                colaPacientes[i].Atendido = 2;
+				contador++;////////////////////////////////cambiar
+
+			}
+			}
+			if(!pacienteMTipo && !pacienteDTipo){ //Si no hay pacientes, espero 1.
+				sleep(1);
+				i = 0;
+			}
+
+			if(contador == 5){ //Miro a ver si tomo cafe
+                	sleep(5);
+                }
+
+            i++;
+		}
+		
+
+	}else if(enfermero.ID == 1){
+
+		
+
+		int contador = 0;
+		i = 0;
+
+		while(i < nPacientes && !pacienteMTipo)
+		{
+
+		if(colaPacientes[i].ID!=0){		
+
+			if(colaPacientes[i].Tipo == enfermero.Tipo){
+				pthread_mutex_lock(&mutexColaPacientes);
+				pacienteMTipo = true;
+
+				colaPacientes[i].Atendido = 1;
+				//CALCULAR EL TIEMPO DE REACCION, DIRECTAMENTE O EN UNA FUNCION*********************************************************************
+				//FALTA TIPO DE ATENCION Y A PARTIR DE AHI CALCULOS
+
+				pthread_mutex_unlock(&mutexColaPacientes);
+
+				tipoAtencion = calculaAleatorios(1, 100);
+
+				//Tiene todo en regla
+				if(tipoAtencion <= 80)
+				{
+					tiempoEspera = calculaAleatorios(1, 4);
+				//Está mal identificado
+				}else if(tipoAtencion > 80 && tipoAtencion <= 90)
+				{
+					tiempoEspera = calculaAleatorios(2, 6);
+				//Tiene catarro o gripe
+				}else
+				{
+					tiempoEspera = calculaAleatorios(6, 10);
+				}
+
+				////////////////////////////////////////////////////////////////////////////////////unlock
+
+				pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Enfermero", enfermero.ID, "Comienza la actividad.");
+                        pthread_mutex_unlock(&mutexLog);
+
+                //TIPO ATENCION*******************************************************************************************************************
+                sleep(tiempoEspera);
+
+                pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad.");
+                        pthread_mutex_unlock(&mutexLog);
+
+                pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad por...");//Varios tipos*****************************************
+                        pthread_mutex_unlock(&mutexLog);
+
+                colaPacientes[i].Atendido = 2;
+                contador++;
+
+			}else{
+				pacienteDTipo = true;
+				colaPacientes[i].Atendido = 1;
+				//CALCULAR EL TIEMPO DE REACCION, DIRECTAMENTE O EN UNA FUNCION*********************************************************************
+				//FALTA TIPO DE ATENCION Y A PARTIR DE AHI CALCULOS
+
+				pthread_mutex_unlock(&mutexColaPacientes);
+
+				////////////////////////////////////////////////////////////////////////////////////unlock
+
+				tipoAtencion = calculaAleatorios(1, 100);
+
+				//Tiene todo en regla
+				if(tipoAtencion <= 80)
+				{
+					tiempoEspera = calculaAleatorios(1, 4);
+				//Está mal identificado
+				}else if(tipoAtencion > 80 && tipoAtencion <= 90)
+				{
+					tiempoEspera = calculaAleatorios(2, 6);
+				//Tiene catarro o gripe
+				}else
+				{
+					tiempoEspera = calculaAleatorios(6, 10);
+				}
+
+				////////////////////////////////////////////////////////////////////////////////////unlock
+
+				pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Enfermero", enfermero.ID, "Comienza la actividad.");
+                        pthread_mutex_unlock(&mutexLog);
+
+                //TIPO ATENCION*******************************************************************************************************************
+                sleep(tiempoEspera);
+
+                pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad.");
+                        pthread_mutex_unlock(&mutexLog);
+
+                pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad por...");//Varios tipos*****************************************
+                        pthread_mutex_unlock(&mutexLog);
+
+                colaPacientes[i].Atendido = 2;
+				contador++;
+			}
+	}
+			if(!pacienteMTipo && !pacienteDTipo){
+				sleep(1);
+				i = 0;
+			}
+
+			if(contador == 5){
+                	sleep(5);
+                }
+
+            i++;
+		}
+		
+	}else if(enfermero.ID == 2){
+		
+		int contador = 0;
+		i = 0;
+
+		while(i < nPacientes && !pacienteMTipo)
+		{
+
+		if(colaPacientes[i].ID!=0){
+
+			if(colaPacientes[i].Tipo == enfermero.Tipo){
+				pthread_mutex_lock(&mutexColaPacientes);
+				pacienteMTipo = true;
+
+				colaPacientes[i].Atendido = 1;
+				//CALCULAR EL TIEMPO DE REACCION, DIRECTAMENTE O EN UNA FUNCION*********************************************************************
+				//FALTA TIPO DE ATENCION Y A PARTIR DE AHI CALCULOS
+
+				pthread_mutex_unlock(&mutexColaPacientes);
+
+				tipoAtencion = calculaAleatorios(1, 100);
+
+				//Tiene todo en regla
+				if(tipoAtencion <= 80)
+				{
+					tiempoEspera = calculaAleatorios(1, 4);
+				//Está mal identificado
+				}else if(tipoAtencion > 80 && tipoAtencion <= 90)
+				{
+					tiempoEspera = calculaAleatorios(2, 6);
+				//Tiene catarro o gripe
+				}else
+				{
+					tiempoEspera = calculaAleatorios(6, 10);
+				}
+
+				////////////////////////////////////////////////////////////////////////////////////unlock
+
+				pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Enfermero", enfermero.ID, "Comienza la actividad.");
+                        pthread_mutex_unlock(&mutexLog);
+
+                //TIPO ATENCION*******************************************************************************************************************
+                sleep(tiempoEspera);
+
+                pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad.");
+                        pthread_mutex_unlock(&mutexLog);
+
+                pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad por...");//Varios tipos*****************************************
+                        pthread_mutex_unlock(&mutexLog);
+
+                colaPacientes[i].Atendido = 2;
+                contador++;
+
+			}else{
+				pacienteDTipo = true;
+				colaPacientes[i].Atendido = 1;
+				//CALCULAR EL TIEMPO DE REACCION, DIRECTAMENTE O EN UNA FUNCION*********************************************************************
+				//FALTA TIPO DE ATENCION Y A PARTIR DE AHI CALCULOS
+				pthread_mutex_unlock(&mutexColaPacientes);
+
+				tipoAtencion = calculaAleatorios(1, 100);
+
+			//Tiene todo en regla
+			if(tipoAtencion <= 80)
+			{
+				tiempoEspera = calculaAleatorios(1, 4);
+			//Está mal identificado
+			}else if(tipoAtencion > 80 && tipoAtencion <= 90)
+			{
+				tiempoEspera = calculaAleatorios(2, 6);
+			//Tiene catarro o gripe
+			}else
+			{
+				tiempoEspera = calculaAleatorios(6, 10);
+			}
+
+				////////////////////////////////////////////////////////////////////////////////////unlock
+
+				pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Enfermero", enfermero.ID, "Comienza la actividad.");
+                        pthread_mutex_unlock(&mutexLog);
+
+                //TIPO ATENCION*******************************************************************************************************************
+                sleep(tiempoEspera);
+
+                pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad.");
+                        pthread_mutex_unlock(&mutexLog);
+
+                pthread_mutex_lock(&mutexLog);
+                        writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad por...");//Varios tipos*****************************************
+                        pthread_mutex_unlock(&mutexLog);
+
+                colaPacientes[i].Atendido = 2;
+				contador++;
+			}
+
+		}
 
 			if(!pacienteMTipo && !pacienteDTipo){
 				sleep(1);
