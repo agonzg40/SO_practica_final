@@ -896,7 +896,7 @@ void *accionesEstadistico(void *arg){
 	
 	while(i < nPacientes && !pacienteEstudio)
 	{
-		if(colaPacientes[i].Serologia == 0){
+		if(colaPacientes[i].Serologia == 1){
 			pacienteEstudio = true;
 
 			pthread_mutex_lock(&mutexLog);
