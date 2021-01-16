@@ -54,6 +54,7 @@ void *accionesEstadistico(void *arg);
 //void finalizar(int signal);
 void writeLogMessage(char *identifier, int id, char *msg);
 int calculaAleatorios(int min, int max);
+int calculaColaMasGrande();
 
 
 int main(int argc, char *argv[]){
@@ -856,9 +857,6 @@ void *accionesMedico(void *arg){
 
 	int i;
 	int tipoAtencion, tiempoEspera, reaccion, masPacientes;
-	int colaPacientesJunior = 0;
-	int colaPacientesMedio = 0;
-	int colaPacientesSenior = 0;
 	bool encontrado = false;
 	bool pacienteConReaccion;
 	
@@ -868,9 +866,7 @@ void *accionesMedico(void *arg){
 		pthread_mutex_lock(&mutexColaPacientes);
 		if(colaPacientes[0].ID != 0)
 		{
-
-			
-
+			printf("accionesM_2\n");
 			//Busco el primer paciente en la cola que ha dado reacción
 			encontrado = false;
 			i = 0;
@@ -889,41 +885,12 @@ void *accionesMedico(void *arg){
 			//Si no ha encontrado ningún paciente que haya dado reacción busco pacientes en la cola con más solicitudes
 			if(encontrado == false)
 			{
-				//Calculo cuantos pacientes de cada tipo hay esperando
-				for(i = 0; i < nPacientes; i++)
-				{
-					if(colaPacientes[i].Tipo == 0)
-					{
-						colaPacientesJunior++;
-					}else if(colaPacientes[i].Tipo == 1)
-					{
-						colaPacientesMedio++;
-					}else if(colaPacientes[i].Tipo == 2)
-					{
-						colaPacientesSenior++;
-					}
-				}
-				
-
-				//Busco que cola ha resultado más grande
-				if(colaPacientesJunior > colaPacientesMedio && colaPacientesJunior > colaPacientesSenior)
-				{
-					masPacientes = 0;
-				}else if(colaPacientesMedio > colaPacientesJunior && colaPacientesMedio > colaPacientesSenior)
-				{
-					masPacientes = 1;
-				}else if(colaPacientesSenior > colaPacientesMedio && colaPacientesSenior > colaPacientesJunior)
-				{
-					masPacientes = 2;
-				}else{
-					
-					masPacientes=0;
-				}
-
+				masPacientes = calculaColaMasGrande();
+				i = 0;
 				//Busco el primer paciente del tipo seleccionado
 				while(i<nPacientes && encontrado == false)
 				{
-					if(colaPacientes[i].Tipo == masPacientes)
+					if(colaPacientes[i].Tipo == masPacientes && colaPacientes[i].Atendido == 0)
 					{
 						encontrado = true;
 					}else
@@ -931,23 +898,27 @@ void *accionesMedico(void *arg){
 						i++;
 					}
 				}
-				
 			
+			}else{
+				pthread_mutex_lock(&mutexLog);
+		            writeLogMessage("Medico", 1, "Hay un paciente con reacción al que atender");
+				pthread_mutex_unlock(&mutexLog);
 			}
 			
 			//Si ha encontrado un paciente al que atender comienza el proceso de vacunación
+
 			pacienteConReaccion = false;
+
 			if(encontrado == true){
-				pthread_mutex_lock(&mutexLog);
-		            writeLogMessage("Medico", 1, "Comienzo a atender al paciente");
-				pthread_mutex_unlock(&mutexLog);
 				if(colaPacientes[i].Atendido = 4)
 				{
 					colaPacientes[i].Atendido = 5;
 					pacienteConReaccion = true;
-				}else{
-					colaPacientes[i].Atendido = 2;
+				}else
+				{
+					colaPacientes[i].Atendido = 1;
 				}
+
 				pthread_mutex_unlock(&mutexColaPacientes);
 
 				tipoAtencion = calculaAleatorios(1, 100);
@@ -967,7 +938,12 @@ void *accionesMedico(void *arg){
 				}
 				
 				if(pacienteConReaccion == true){
+
 					tiempoEspera += 5;
+				}else{
+					pthread_mutex_lock(&mutexLog);
+		            writeLogMessage("Medico", 1, "Como no había pacientes con reacción ayudo a los enfermeros");
+					pthread_mutex_unlock(&mutexLog);
 				}
 
 				pthread_mutex_lock(&mutexLog);
@@ -980,9 +956,18 @@ void *accionesMedico(void *arg){
 		            writeLogMessage("Medico", 1, "He acabado de atender al paciente correctamente");
 				pthread_mutex_unlock(&mutexLog);
 
-				pthread_mutex_lock(&mutexLog);
+				if(pacienteConReaccion == false)
+				{
+					pthread_mutex_lock(&mutexColaPacientes);
+					colaPacientes[i].Atendido = 2;
+					pthread_mutex_unlock(&mutexColaPacientes);
+
+					
+				}else{
+					pthread_mutex_lock(&mutexLog);
 		            writeLogMessage("Medico", 1, "Como ya ha sido atendido el paciente se marcha del consultorio");
-				pthread_mutex_unlock(&mutexLog);
+					pthread_mutex_unlock(&mutexLog);
+				}
 
 			//Si no  ha encontrado ningún paciente espera 1 segundo antes de buscar otra vez
 			}else
@@ -1010,27 +995,30 @@ void *accionesEstadistico(void *arg){
 	bool pacienteEstudio = false;
 	i = 0;
 	
-	//while(i < nPacientes && !pacienteEstudio)
+	
 	while(1)
 	{
-		if(colaPacientes[i].Serologia == 1){
-			pacienteEstudio = true;
+		while(i < nPacientes && !pacienteEstudio)
+		{
+			if(colaPacientes[i].Serologia == 1){
+				pacienteEstudio = true;
 
-			pthread_mutex_lock(&mutexLog);
-                        writeLogMessage("Estadistico", 1, "Comienza la actividad.");
-                        pthread_mutex_unlock(&mutexLog);
+				pthread_mutex_lock(&mutexLog);
+	                        writeLogMessage("Estadistico", 1, "Comienza la actividad.");
+	                        pthread_mutex_unlock(&mutexLog);
 
-            sleep(4);
+	            sleep(4);
 
-            //USAR VARIABLE CONDICION mutexPacientesEstudio *******************************************************
+	            //USAR VARIABLE CONDICION mutexPacientesEstudio *******************************************************
 
-            pthread_mutex_lock(&mutexLog);
-                        writeLogMessage("Estadistico", 1, "Finaliza la actividad.");
-                        pthread_mutex_unlock(&mutexLog);
+	            pthread_mutex_lock(&mutexLog);
+	                        writeLogMessage("Estadistico", 1, "Finaliza la actividad.");
+	                        pthread_mutex_unlock(&mutexLog);
 
-			pthread_cond_signal(&condMarchar);
+				pthread_cond_signal(&condMarchar);
+			}
+			i++;
 		}
-		//i++;
 		pthread_cond_wait(&condSerologia,&mutexEstadistico);
 	}
 	
@@ -1063,19 +1051,50 @@ int calculaAleatorios(int min, int max)
         return aleatorio;
 }
 
-/*void finalizar(int signal){
+int calculaColaMasGrande()
+{
+	int colaPacientesJunior = 0;
+	int colaPacientesMedio = 0;
+	int colaPacientesSenior = 0;
+	int i;
+	//Calculo cuantos pacientes de cada tipo hay esperando
+	for(i = 0; i < nPacientes; i++)
+	{
+		if(colaPacientes[i].Tipo == 0)
+		{
+			colaPacientesJunior++;
+		}else if(colaPacientes[i].Tipo == 1)
+		{
+			colaPacientesMedio++;
+		}else if(colaPacientes[i].Tipo == 2)
+		{
+			colaPacientesSenior++;
+		}
+	}
 
+	if(colaPacientesJunior > colaPacientesMedio && colaPacientesJunior > colaPacientesSenior)
+	{
+		return 0;
+	}else if(colaPacientesMedio > colaPacientesJunior && colaPacientesMedio > colaPacientesSenior)
+	{
+		return 1;
+	}else if(colaPacientesSenior > colaPacientesMedio && colaPacientesSenior > colaPacientesJunior)
+	{
+		return 2;
+	}else
+	{	
+		return 0;
+	}
+}
+
+/*void finalizar(int signal){
 	int i;
 	terminado = 1;
 	pthread_mutex_lock(&mutexColaPacientes);
 	for(i = 0; i<nPacientes; i++){
-
 		colaPacientes[i].ID = 0;
 		//terminar hilos
 	}
-
 	pthread_mutex_unlock(&mutexColaPacientes);
-
         exit(0);
 }*/
-
