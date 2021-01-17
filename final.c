@@ -16,7 +16,7 @@ typedef struct{
 	int ID;
 	int Atendido; //0 - no, 1 - si esta siendo atendido, 2 - si ya ha sido atendido, 3 - no ha tenido reaccion, 4 - ha tenido reaccion, 5- ha sido atendido con reaccion, 6- esta decidiendo si se queda
 	int Tipo; //Edad de los pacientes, 0-15-junior, 16-59-medio, 60-100 senior, 0 - junior, 1 - medio, 2 - senior
-	int Serologia; // 1-Participan, 0-No
+	int Serologia; // 1-Participan, 0-No, 2-Ya participó
 	int Posicion; //Guarda la posicion en la que se encuentra en la cola
 	pthread_t paciente;
 
@@ -36,6 +36,7 @@ typedef struct{
 int contadorPacientes, terminado, nPacientes;
 pthread_mutex_t mutexLog, mutexColaPacientes, mutexEstadistico, mutexAleatorios, mutexColaEnfermero;
 pthread_cond_t condReaccion, condSerologia, condMarchar;
+bool cond = false;
 
 Pacientes colaPacientes[5];
 Enfermero colaEnfermero[3];
@@ -93,7 +94,7 @@ int main(int argc, char *argv[]){
 
 	if(argc==2) {
 		nPacientes = atoi(argv[1]);
-        }
+    }
 
 	//Inicializar estructuras a 0
 	int i;	
@@ -116,9 +117,10 @@ int main(int argc, char *argv[]){
 	pthread_create(&medico, NULL, &accionesMedico, NULL);
 	pthread_create(&estadistico, NULL, &accionesEstadistico, NULL);
 
-	 while(terminado == 0){
+	while(terminado == 0){
                 pause;
         }
+    exit(0);
 }
 
 void inicializarEnfermeros(int nEnfermeros){
@@ -382,22 +384,22 @@ void *accionesPaciente(void *arg){
 				colaPacientes[i].Serologia = 1;
 				pthread_mutex_unlock(&mutexColaPacientes);
 
-				pthread_mutex_lock(&mutexEstadistico);
-
+				//pthread_mutex_lock(&mutexEstadistico);
+				cond = true;
+				//pthread_mutex_unlock(&mutexEstadistico);
 				pthread_cond_signal(&condSerologia);////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 				pthread_mutex_lock(&mutexLog);
 				writeLogMessage("Paciente", paciente.ID, "Estoy listo para el estudio.");
-                        	pthread_mutex_unlock(&mutexLog);
-
+               	pthread_mutex_unlock(&mutexLog);
 
 				pthread_cond_wait(&condMarchar,&mutexColaPacientes);
-
+				pthread_mutex_unlock(&mutexEstadistico);
 				pthread_mutex_lock(&mutexLog);
 				writeLogMessage("Paciente", paciente.ID, "Me marcho del estudio.");
-                        	pthread_mutex_unlock(&mutexLog);
+               	pthread_mutex_unlock(&mutexLog);
 
-				pthread_mutex_unlock(&mutexEstadistico);
+				
 
 			}else{
 
@@ -1031,31 +1033,32 @@ void *accionesEstadistico(void *arg){
 	
 	while(1)
 	{
+		while(cond == false){
+		printf("accionesEst2\n");
+		pthread_cond_wait(&condSerologia,&mutexEstadistico);
+		printf("HOLIIII\n");
+		}
 		while(i < nPacientes && !pacienteEstudio)
 		{
 			if(colaPacientes[i].Serologia == 1){
 				pacienteEstudio = true;
 
 				pthread_mutex_lock(&mutexLog);
-	                        writeLogMessage("Estadistico", 1, "Comienza la actividad.");
-	                        pthread_mutex_unlock(&mutexLog);
+                writeLogMessage("Estadistico", 1, "Comienza la actividad.");
+                pthread_mutex_unlock(&mutexLog);
 
 	            sleep(4);
 
-	            //USAR VARIABLE CONDICION mutexPacientesEstudio *******************************************************
-
 	            pthread_mutex_lock(&mutexLog);
-	                        writeLogMessage("Estadistico", 1, "Finaliza la actividad.");
-	                        pthread_mutex_unlock(&mutexLog);
+                writeLogMessage("Estadistico", 1, "Finaliza la actividad.");
+                pthread_mutex_unlock(&mutexLog);
 
 				pthread_cond_signal(&condMarchar);
 			}
 			i++;
 		}
-		pthread_cond_wait(&condSerologia,&mutexEstadistico);
+		
 	}
-	
-
 	pthread_mutex_unlock(&mutexEstadistico);
 }
 
