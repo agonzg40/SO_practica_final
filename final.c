@@ -87,7 +87,13 @@ int main(int argc, char *argv[]){
 	srand(time(NULL));
 	contadorPacientes = 0;
 	terminado = 0;
-	nPacientes = 20;
+	nPacientes = 0;
+
+	//Comprobamos los argumentos
+
+	if(argc==2) {
+		nPacientes = atoi(argv[1]);
+        }
 
 	//Inicializar estructuras a 0
 	int i;	
@@ -364,17 +370,19 @@ void *accionesPaciente(void *arg){
 
 			printf("He muteado la cola en PACIENTES 5\n");
 
-			paciente.Atendido = 3;
+			colaPacientes[i].Atendido = 3;
 			//pthread_mutex_unlock(&mutexColaPacientes);
 
-			if(calculaAleatorios(0, 100) <= 25){ //Calculamos si decide participar en el estudio
+			if(calculaAleatorios(0, 100) <= 100){ //Calculamos si decide participar en el estudio
 
 				//pthread_mutex_lock(&mutexColaPacientes);
 
 				printf("He muteado la cola en PACIENTES 6\n");
 
-				paciente.Serologia = 1;
-				//pthread_mutex_unlock(&mutexColaPacientes);
+				colaPacientes[i].Serologia = 1;
+				pthread_mutex_unlock(&mutexColaPacientes);
+
+				pthread_mutex_lock(&mutexEstadistico);
 
 				pthread_cond_signal(&condSerologia);////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -382,13 +390,14 @@ void *accionesPaciente(void *arg){
 				writeLogMessage("Paciente", paciente.ID, "Estoy listo para el estudio.");
                         	pthread_mutex_unlock(&mutexLog);
 
+
 				pthread_cond_wait(&condMarchar,&mutexColaPacientes);
 
 				pthread_mutex_lock(&mutexLog);
 				writeLogMessage("Paciente", paciente.ID, "Me marcho del estudio.");
                         	pthread_mutex_unlock(&mutexLog);
 
-
+				pthread_mutex_unlock(&mutexEstadistico);
 
 			}else{
 
@@ -404,9 +413,12 @@ void *accionesPaciente(void *arg){
                         	pthread_mutex_unlock(&mutexLog);
                 paciente.ID = 0;
 
+
+				pthread_mutex_unlock(&mutexColaPacientes);
+
 			}
 		
-			pthread_mutex_unlock(&mutexColaPacientes);
+			//pthread_mutex_unlock(&mutexColaPacientes);
 		}
 
 		//pthread_mutex_lock(&mutexColaPacientes);
