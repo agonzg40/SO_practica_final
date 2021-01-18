@@ -38,7 +38,7 @@ pthread_mutex_t mutexLog, mutexColaPacientes, mutexEstadistico, mutexAleatorios,
 pthread_cond_t condReaccion, condSerologia, condMarchar;
 bool cond = false;
 
-Pacientes colaPacientes[5];
+Pacientes colaPacientes[15];
 Enfermero colaEnfermero[3];
 
 //hilos
@@ -118,9 +118,9 @@ int main(int argc, char *argv[]){
 	pthread_create(&estadistico, NULL, &accionesEstadistico, NULL);
 
 	while(terminado == 0){
-        pause;
+        pause();
     }
-    exit(0);
+    pthread_exit(NULL);
 }
 
 void inicializarEnfermeros(int nEnfermeros){
@@ -238,11 +238,10 @@ void *accionesPaciente(void *arg){
 	 //Calculamos el aleatorio para saber si se lo piensa mejor
 	 //Calculamos el aleatorio del 70 por ciento que queda para saber si se va al baño EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
 	//Calculamos si el Paciente tiene reaccion
-	
 
 	pthread_mutex_lock(&mutexLog);
 
-	
+	printf("He entrado en el mutex de accionesP\n");
 
 	char mensaje[100] = "El paciente es de tipo: ";
 
@@ -268,15 +267,20 @@ void *accionesPaciente(void *arg){
 	
 	sleep(3);
 
-	//pthread_mutex_lock(&mutexColaPacientes);
+	printf("TOMATE\n");
+
+	pthread_mutex_lock(&mutexColaPacientes);
+
+	printf("PACIENTE atendido: %d, ID: %d\n", paciente.Atendido, paciente.ID);
 
 	while(paciente.Atendido == 0 && paciente.ID != 0){
 		
+		
+
 		aleatorio = calculaAleatorios(0, 100);
 		aleatorio2 = calculaAleatorios(0, 100);
 		aleatorio3 = calculaAleatorios(0, 100);
 
-		pthread_mutex_lock(&mutexColaPacientes);
 		printf("PRUEBA\n");
 		if(aleatorio <=20 || aleatorio2 <= 10){ //Se van por cansancio o se lo piensa mejor
 
@@ -337,15 +341,16 @@ void *accionesPaciente(void *arg){
 			sleep(3);
 
 		}
-
-		//pthread_mutex_lock(&mutexColaPacientes);
 		
-		while(colaPacientes[i].Atendido != 2){ //Esperamos a que haya sido atendido
-			//printf("qweqeqwrwqrqqwetrwetq.%d\n",colaPacientes[i].Atendido);
-			sleep(1);
+		while(1){ //Esperamos a que haya sido atendido
+			pthread_mutex_lock(&mutexColaPacientes);
+			if(colaPacientes[i].Atendido != 2){
+				pthread_mutex_unlock(&mutexColaPacientes);
+				sleep(1);
+			}
 		}
 
-		//pthread_mutex_unlock(&mutexColaPacientes);
+		
 		
 		aleatorio4 = calculaAleatorios(0, 100);
 
@@ -366,6 +371,7 @@ void *accionesPaciente(void *arg){
 			while(paciente.Atendido !=5){ //espera a que haya sido atendido por el medico
 				sleep(1);		
 			}
+			printf("Conde te queremos\n");
 
 		}else{ //Si no le da reaccion
 
@@ -486,7 +492,9 @@ void *accionesEnfermero(void *arg){
 		if(enfermero.ID == 0){//preguntamos en que enfermero estamos
 			//if(colaPacientes[0].ID != 0){
 			
-				pthread_mutex_lock(&mutexColaPacientes);
+			pthread_mutex_lock(&mutexColaPacientes);
+
+			if(colaPacientes[0].ID != 0){
 
 				//printf("ESTAMO ACTIVO BBY enfermero 0 mismo\n");
 
@@ -494,7 +502,9 @@ void *accionesEnfermero(void *arg){
 				encontrado = false;
 				pacienteAtendido = false;
 				while(i < nPacientes && colaPacientes[i].ID != 0 && pacienteAtendido == false && colaPacientes[i].Atendido == 0){/////////////////////////CAMBIAR EN TODOS LADOS ULTIMA CONDICIION
-					//El paciente es el mismo tipo que su enfermero							
+					//El paciente es el mismo tipo que su enfermero	
+
+
 					if( colaPacientes[i].Tipo == enfermero.Tipo){
 
 						encontrado = true;
@@ -502,7 +512,9 @@ void *accionesEnfermero(void *arg){
 						pacienteAtendido = true;
 
 						colaPacientes[i].Atendido = 1; //Esta siendo atentido
-						printf("%d\n",i);
+
+						pthread_mutex_unlock(&mutexColaPacientes);
+
 						tipoAtencion = calculaAleatorios(1, 100);
 
 						//Tiene todo en regla
@@ -522,7 +534,7 @@ void *accionesEnfermero(void *arg){
 						pthread_mutex_lock(&mutexLog);
                         writeLogMessage("Enfermero", enfermero.ID, "Comienza la actividad.");
                         pthread_mutex_unlock(&mutexLog);
-		                
+
 		                sleep(tiempoEspera);
 
 		                pthread_mutex_lock(&mutexLog);
@@ -533,21 +545,19 @@ void *accionesEnfermero(void *arg){
                         writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad por...");//Varios tipos*****************************************
                         pthread_mutex_unlock(&mutexLog);
 
+                        pthread_mutex_lock(&mutexColaPacientes);
 		                colaPacientes[i].Atendido = 2; //Ya ha sido atentido
-		             
+		                pthread_mutex_unlock(&mutexColaPacientes);
+
 		                enfermero.nPacientes++;
 		                
 		            }
 		            i++;
 				}//Fin while(mismo tipo paciente)
-
-				pthread_mutex_unlock(&mutexColaPacientes);
 				
 				if(encontrado == false){//El paciente es de distinto tipo que el enfermero
 					i = 0;
 					
-
-					pthread_mutex_lock(&mutexColaPacientes);
 					pacienteAtendido = false;
 
 					//printf("ESTAMO ACTIVO BBY enfermero 0 diferente\n");
@@ -560,6 +570,8 @@ void *accionesEnfermero(void *arg){
 							printf("He muteado la cola en ENFERMERO\n");
 
 							colaPacientes[i].Atendido = 1; //Esta siendo atentido
+
+							pthread_mutex_unlock(&mutexColaPacientes);
 
 							tipoAtencion = calculaAleatorios(1, 100);
 
@@ -591,7 +603,9 @@ void *accionesEnfermero(void *arg){
 	                        writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad por...");//Varios tipos*****************************************
 	                        pthread_mutex_unlock(&mutexLog);
 
+	                        pthread_mutex_lock(&mutexColaPacientes);
 			                colaPacientes[i].Atendido = 2; //Ya ha sido atentido
+			                pthread_mutex_unlock(&mutexColaPacientes);
 
 			                //pthread_mutex_unlock(&mutexColaPacientes);//desbloqueamos al paciente
 
@@ -600,8 +614,6 @@ void *accionesEnfermero(void *arg){
 
 		                i++;
 					}//fin while(distinto tipo de paciente)
-
-					pthread_mutex_unlock(&mutexColaPacientes);
 
 				}//fin if(no se ha encontrado paciente del mismo tipo)
 
@@ -615,7 +627,9 @@ void *accionesEnfermero(void *arg){
 	            	sleep(1);
 	            	i = 0;
 	            }
-			//}
+			}else{
+				pthread_mutex_unlock(&mutexColaPacientes);
+			}
 			//fin enfermero 0
 		}else if(enfermero.ID == 1){
 
@@ -623,80 +637,27 @@ void *accionesEnfermero(void *arg){
 			pthread_mutex_lock(&mutexColaPacientes);
 			pacienteAtendido = false;
 
-			//printf("ESTAMO ACTIVO BBY enfermero 1 mismo\n");
+			if(colaPacientes[0].ID != 0){
 
-			i = 0;
-			encontrado = false;
+				//printf("ESTAMO ACTIVO BBY enfermero 1 mismo\n");
 
-			while(i < nPacientes && colaPacientes[i].ID != 0 && pacienteAtendido == false){
-
-				//El paciente es el mismo tipo que su enfermero							
-				if(colaPacientes[i].Atendido == 0 && colaPacientes[i].Tipo == enfermero.Tipo){
-
-					encontrado = true;
-					mismoTipo = true;
-					pacienteAtendido = true;
-
-					
-
-					colaPacientes[i].Atendido = 1; //Esta siendo atentido
-
-					tipoAtencion = calculaAleatorios(1, 100);
-
-					//Tiene todo en regla
-					if(tipoAtencion <= 80)
-					{
-						tiempoEspera = calculaAleatorios(1, 4);
-					//Está mal identificado
-					}else if(tipoAtencion > 80 && tipoAtencion <= 90)
-					{
-						tiempoEspera = calculaAleatorios(2, 6);
-					//Tiene catarro o gripe
-					}else
-					{
-						tiempoEspera = calculaAleatorios(6, 10);
-					}
-
-					pthread_mutex_lock(&mutexLog);
-	                        writeLogMessage("Enfermero", enfermero.ID, "Comienza la actividad.");
-	                        pthread_mutex_unlock(&mutexLog);
-	                
-	                sleep(tiempoEspera);
-
-	                pthread_mutex_lock(&mutexLog);
-	                        writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad.");
-	                        pthread_mutex_unlock(&mutexLog);
-	                pthread_mutex_lock(&mutexLog);
-	                        writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad por...");//Varios tipos*****************************************
-	                        pthread_mutex_unlock(&mutexLog);
-
-	                colaPacientes[i].Atendido = 2; //Ya ha sido atentido
-	             
-	                enfermero.nPacientes++;
-	                
-	            }
-	            i++;
-			}//Fin while(mismo tipo paciente)
-
-			pthread_mutex_unlock(&mutexColaPacientes);
-				
-			if(encontrado == false){//El paciente es de distinto tipo que el enfermero
 				i = 0;
-				
-
-				pthread_mutex_lock(&mutexColaPacientes);
-				pacienteAtendido = false;
-
-				//printf("ESTAMO ACTIVO BBY enfermero 1 diferente\n");
+				encontrado = false;
 
 				while(i < nPacientes && colaPacientes[i].ID != 0 && pacienteAtendido == false){
-					if(colaPacientes[i].Atendido == 0){
-						distintoTipo = true;
+
+					//El paciente es el mismo tipo que su enfermero							
+					if(colaPacientes[i].Atendido == 0 && colaPacientes[i].Tipo == enfermero.Tipo){
+
+						encontrado = true;
+						mismoTipo = true;
 						pacienteAtendido = true;
 
-						printf("He muteado la cola en ENFERMERO\n");
+						
 
 						colaPacientes[i].Atendido = 1; //Esta siendo atentido
+
+						pthread_mutex_unlock(&mutexColaPacientes);
 
 						tipoAtencion = calculaAleatorios(1, 100);
 
@@ -715,30 +676,231 @@ void *accionesEnfermero(void *arg){
 						}
 
 						pthread_mutex_lock(&mutexLog);
-                        writeLogMessage("Enfermero", enfermero.ID, "Comienza la actividad.");
-                        pthread_mutex_unlock(&mutexLog);
+	                    writeLogMessage("Enfermero", enfermero.ID, "Comienza la actividad.");
+	                    pthread_mutex_unlock(&mutexLog);
 		                
 		                sleep(tiempoEspera);
 
 		                pthread_mutex_lock(&mutexLog);
-                        writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad.");
-                        pthread_mutex_unlock(&mutexLog);
+	                    writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad.");
+	                    pthread_mutex_unlock(&mutexLog);
 
 		                pthread_mutex_lock(&mutexLog);
-                        writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad por...");//Varios tipos*****************************************
-                        pthread_mutex_unlock(&mutexLog);
+	                    writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad por...");//Varios tipos*****************************************
+	                    pthread_mutex_unlock(&mutexLog);
 
+	                    pthread_mutex_lock(&mutexColaPacientes);
 		                colaPacientes[i].Atendido = 2; //Ya ha sido atentido
+		             	pthread_mutex_unlock(&mutexColaPacientes);
 
 		                enfermero.nPacientes++;
+		                
+		            }
+		            i++;
+				}//Fin while(mismo tipo paciente)
+					
+				if(encontrado == false){//El paciente es de distinto tipo que el enfermero
+					i = 0;
+					
+					pacienteAtendido = false;
+
+					//printf("ESTAMO ACTIVO BBY enfermero 1 diferente\n");
+
+					while(i < nPacientes && colaPacientes[i].ID != 0 && pacienteAtendido == false){
+						if(colaPacientes[i].Atendido == 0){
+							distintoTipo = true;
+							pacienteAtendido = true;
+
+							printf("He muteado la cola en ENFERMERO\n");
+
+							colaPacientes[i].Atendido = 1; //Esta siendo atentido
+
+							pthread_mutex_unlock(&mutexColaPacientes);
+
+							tipoAtencion = calculaAleatorios(1, 100);
+
+							//Tiene todo en regla
+							if(tipoAtencion <= 80)
+							{
+								tiempoEspera = calculaAleatorios(1, 4);
+							//Está mal identificado
+							}else if(tipoAtencion > 80 && tipoAtencion <= 90)
+							{
+								tiempoEspera = calculaAleatorios(2, 6);
+							//Tiene catarro o gripe
+							}else
+							{
+								tiempoEspera = calculaAleatorios(6, 10);
+							}
+
+							pthread_mutex_lock(&mutexLog);
+	                        writeLogMessage("Enfermero", enfermero.ID, "Comienza la actividad.");
+	                        pthread_mutex_unlock(&mutexLog);
+			                
+			                sleep(tiempoEspera);
+
+			                pthread_mutex_lock(&mutexLog);
+	                        writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad.");
+	                        pthread_mutex_unlock(&mutexLog);
+
+			                pthread_mutex_lock(&mutexLog);
+	                        writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad por...");//Varios tipos*****************************************
+	                        pthread_mutex_unlock(&mutexLog);
+
+	                        pthread_mutex_lock(&mutexColaPacientes);
+			                colaPacientes[i].Atendido = 2; //Ya ha sido atentido
+			                printf("He cambiado el atendido a 2\n");
+			                pthread_mutex_unlock(&mutexColaPacientes);
+
+			                enfermero.nPacientes++;
+			            }
+
+		                i++;
+					}//fin while(distinto tipo de paciente)
+
+				}//fin if(no se ha encontrado paciente del mismo tipo)
+
+					//Miramos a ver si se tiene que ir a tomar café
+		            if(enfermero.nPacientes == 5){
+		                sleep(5);
 		            }
 
-	                i++;
-				}//fin while(distinto tipo de paciente)
+		            //Si no tiene pacientes a los que atender volverá al principio
+		            if(mismoTipo == false && distintoTipo == false){
+		            	sleep(1);
+		            	i = 0;
+		            }
+			
+		            //fin enfermero 1
+	        }else{
+	        	pthread_mutex_unlock(&mutexColaPacientes);
+	        }
+		}else if(enfermero.ID == 2){
 
-				pthread_mutex_unlock(&mutexColaPacientes);
+			pthread_mutex_lock(&mutexColaPacientes);
 
-			}//fin if(no se ha encontrado paciente del mismo tipo)
+			if(colaPacientes[0].ID != 0){
+
+				pacienteAtendido = false;
+
+				//printf("ESTAMO ACTIVO BBY enfermero 2 mismo\n");
+				
+				i = 0;
+				encontrado = false;
+
+				while(i < nPacientes && colaPacientes[i].ID != 0 && pacienteAtendido == false){
+
+					//El paciente es el mismo tipo que su enfermero							
+					if(colaPacientes[i].Atendido == 0 && colaPacientes[i].Tipo == enfermero.Tipo){
+
+						encontrado = true;
+						mismoTipo = true;
+						pacienteAtendido = true;
+
+						colaPacientes[i].Atendido = 1; //Esta siendo atentido
+
+						pthread_mutex_unlock(&mutexColaPacientes);
+
+						tipoAtencion = calculaAleatorios(1, 100);
+
+						//Tiene todo en regla
+						if(tipoAtencion <= 80)
+						{
+							tiempoEspera = calculaAleatorios(1, 4);
+						//Está mal identificado
+						}else if(tipoAtencion > 80 && tipoAtencion <= 90)
+						{
+							tiempoEspera = calculaAleatorios(2, 6);
+						//Tiene catarro o gripe
+						}else
+						{
+							tiempoEspera = calculaAleatorios(6, 10);
+						}
+
+						pthread_mutex_lock(&mutexLog);
+	                    writeLogMessage("Enfermero", enfermero.ID, "Comienza la actividad.");
+	                    pthread_mutex_unlock(&mutexLog);
+		                
+		                sleep(tiempoEspera);
+
+		                pthread_mutex_lock(&mutexLog);
+	                    writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad.");
+	                    pthread_mutex_unlock(&mutexLog);
+
+		                pthread_mutex_lock(&mutexLog);
+	                    writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad por...");//Varios tipos*****************************************
+	                    pthread_mutex_unlock(&mutexLog);
+
+	                    pthread_mutex_lock(&mutexColaPacientes);
+		                colaPacientes[i].Atendido = 2; //Ya ha sido atentido
+		                pthread_mutex_unlock(&mutexColaPacientes);
+		             
+		                enfermero.nPacientes++;
+		                
+		            }
+		            i++;
+				}//Fin while(mismo tipo paciente)
+				
+				if(encontrado == false){//El paciente es de distinto tipo que el enfermero
+					i = 0;
+					
+					pacienteAtendido = false;
+					
+					//printf("ESTAMO ACTIVO BBY enfermero 2 diferente\n");
+
+					while(i < nPacientes && colaPacientes[i].ID != 0 && pacienteAtendido == false){
+						if(colaPacientes[i].Atendido == 0){
+							distintoTipo = true;
+							pacienteAtendido = true;
+
+							printf("He muteado la cola en ENFERMERO\n");
+
+							colaPacientes[i].Atendido = 1; //Esta siendo atentido
+
+							pthread_mutex_unlock(&mutexColaPacientes);
+
+							tipoAtencion = calculaAleatorios(1, 100);
+
+							//Tiene todo en regla
+							if(tipoAtencion <= 80)
+							{
+								tiempoEspera = calculaAleatorios(1, 4);
+							//Está mal identificado
+							}else if(tipoAtencion > 80 && tipoAtencion <= 90)
+							{
+								tiempoEspera = calculaAleatorios(2, 6);
+							//Tiene catarro o gripe
+							}else
+							{
+								tiempoEspera = calculaAleatorios(6, 10);
+							}
+
+							pthread_mutex_lock(&mutexLog);
+	                        writeLogMessage("Enfermero", enfermero.ID, "Comienza la actividad.");
+	                        pthread_mutex_unlock(&mutexLog);
+			                
+			                sleep(tiempoEspera);
+
+			                pthread_mutex_lock(&mutexLog);
+	                        writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad.");
+	                        pthread_mutex_unlock(&mutexLog);
+
+			                pthread_mutex_lock(&mutexLog);
+	                        writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad por...");//Varios tipos*****************************************
+	                        pthread_mutex_unlock(&mutexLog);
+
+	                        pthread_mutex_lock(&mutexColaPacientes);
+			                colaPacientes[i].Atendido = 2; //Ya ha sido atentido
+			                pthread_mutex_unlock(&mutexColaPacientes);
+
+			               // pthread_mutex_unlock(&mutexColaPacientes);//desbloqueamos al paciente
+
+			                enfermero.nPacientes++;
+			            }
+
+		                i++;
+					}//fin while(distinto tipo de paciente)
+				}//fin if(no se ha encontrado paciente del mismo tipo)
 
 				//Miramos a ver si se tiene que ir a tomar café
 	            if(enfermero.nPacientes == 5){
@@ -750,147 +912,9 @@ void *accionesEnfermero(void *arg){
 	            	sleep(1);
 	            	i = 0;
 	            }
-		
-	            //fin enfermero 1
-	        //}
-		}else if(enfermero.ID == 2){
-
-		//if(colaPacientes[0].ID != 0){
-
-			pthread_mutex_lock(&mutexColaPacientes);
-			pacienteAtendido = false;
-
-			//printf("ESTAMO ACTIVO BBY enfermero 2 mismo\n");
-			
-			i = 0;
-			encontrado = false;
-
-			while(i < nPacientes && colaPacientes[i].ID != 0 && pacienteAtendido == false){
-
-				//El paciente es el mismo tipo que su enfermero							
-				if(colaPacientes[i].Atendido == 0 && colaPacientes[i].Tipo == enfermero.Tipo){
-
-					encontrado = true;
-					mismoTipo = true;
-					pacienteAtendido = true;
-
-					
-
-					colaPacientes[i].Atendido = 1; //Esta siendo atentido
-
-
-					tipoAtencion = calculaAleatorios(1, 100);
-
-					//Tiene todo en regla
-					if(tipoAtencion <= 80)
-					{
-						tiempoEspera = calculaAleatorios(1, 4);
-					//Está mal identificado
-					}else if(tipoAtencion > 80 && tipoAtencion <= 90)
-					{
-						tiempoEspera = calculaAleatorios(2, 6);
-					//Tiene catarro o gripe
-					}else
-					{
-						tiempoEspera = calculaAleatorios(6, 10);
-					}
-
-					pthread_mutex_lock(&mutexLog);
-	                        writeLogMessage("Enfermero", enfermero.ID, "Comienza la actividad.");
-	                        pthread_mutex_unlock(&mutexLog);
-	                
-	                sleep(tiempoEspera);
-
-	                pthread_mutex_lock(&mutexLog);
-	                        writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad.");
-	                        pthread_mutex_unlock(&mutexLog);
-	                pthread_mutex_lock(&mutexLog);
-	                        writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad por...");//Varios tipos*****************************************
-	                        pthread_mutex_unlock(&mutexLog);
-
-	                colaPacientes[i].Atendido = 2; //Ya ha sido atentido
-	             
-	                enfermero.nPacientes++;
-	                
-	            }
-	            i++;
-			}//Fin while(mismo tipo paciente)
-
-			pthread_mutex_unlock(&mutexColaPacientes);//Desbloqueamos el paciente, al estar siendo atendido nadie deberia buscarlo
-			
-			if(encontrado == false){//El paciente es de distinto tipo que el enfermero
-				i = 0;
-				
-
-				pthread_mutex_lock(&mutexColaPacientes);
-				pacienteAtendido = false;
-				
-				//printf("ESTAMO ACTIVO BBY enfermero 2 diferente\n");
-
-				while(i < nPacientes && colaPacientes[i].ID != 0 && pacienteAtendido == false){
-					if(colaPacientes[i].Atendido == 0){
-						distintoTipo = true;
-						pacienteAtendido = true;
-
-						printf("He muteado la cola en ENFERMERO\n");
-
-						colaPacientes[i].Atendido = 1; //Esta siendo atentido
-
-						pthread_mutex_unlock(&mutexColaPacientes);//Desbloqueamos el paciente, al estar siendo atendido nadie deberia buscarlo
-
-						tipoAtencion = calculaAleatorios(1, 100);
-
-						//Tiene todo en regla
-						if(tipoAtencion <= 80)
-						{
-							tiempoEspera = calculaAleatorios(1, 4);
-						//Está mal identificado
-						}else if(tipoAtencion > 80 && tipoAtencion <= 90)
-						{
-							tiempoEspera = calculaAleatorios(2, 6);
-						//Tiene catarro o gripe
-						}else
-						{
-							tiempoEspera = calculaAleatorios(6, 10);
-						}
-
-						pthread_mutex_lock(&mutexLog);
-                        writeLogMessage("Enfermero", enfermero.ID, "Comienza la actividad.");
-                        pthread_mutex_unlock(&mutexLog);
-		                
-		                sleep(tiempoEspera);
-
-		                pthread_mutex_lock(&mutexLog);
-                        writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad.");
-                        pthread_mutex_unlock(&mutexLog);
-
-		                pthread_mutex_lock(&mutexLog);
-                        writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad por...");//Varios tipos*****************************************
-                        pthread_mutex_unlock(&mutexLog);
-
-		                colaPacientes[i].Atendido = 2; //Ya ha sido atentido
-
-		               // pthread_mutex_unlock(&mutexColaPacientes);//desbloqueamos al paciente
-
-		                enfermero.nPacientes++;
-		            }
-
-	                i++;
-				}//fin while(distinto tipo de paciente)
-				pthread_mutex_unlock(&mutexColaPacientes);
-			}//fin if(no se ha encontrado paciente del mismo tipo)
-
-			//Miramos a ver si se tiene que ir a tomar café
-            if(enfermero.nPacientes == 5){
-                sleep(5);
-            }
-
-            //Si no tiene pacientes a los que atender volverá al principio
-            if(mismoTipo == false && distintoTipo == false){
-            	sleep(1);
-            	i = 0;
-            }
-        //}
+        	}else{
+        		pthread_mutex_unlock(&mutexColaPacientes);
+        	}
 		}//fin enfermero 2
 
 	}//Fin while 1
@@ -1050,9 +1074,11 @@ void *accionesEstadistico(void *arg){
 		pthread_cond_wait(&condSerologia,&mutexEstadistico);
 		printf("HOLIIII\n");
 		}
+		pthread_mutex_lock(&mutexColaPacientes);
 		while(i < nPacientes && !pacienteEstudio)
 		{
 			if(colaPacientes[i].Serologia == 1){
+				pthread_mutex_unlock(&mutexColaPacientes);
 				pacienteEstudio = true;
 
 				pthread_mutex_lock(&mutexLog);
