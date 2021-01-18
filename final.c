@@ -389,9 +389,7 @@ void *accionesPaciente(void *arg){
 				colaPacientes[i].Serologia = 1;
 				pthread_mutex_unlock(&mutexColaPacientes);
 
-				//pthread_mutex_lock(&mutexEstadistico);
 				cond = true;
-				//pthread_mutex_unlock(&mutexEstadistico);
 				pthread_cond_signal(&condSerologia);////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 				pthread_mutex_lock(&mutexLog);
@@ -401,7 +399,8 @@ void *accionesPaciente(void *arg){
 				pthread_cond_wait(&condMarchar,&mutexColaPacientes);
 				pthread_mutex_unlock(&mutexEstadistico);
 
-				//pthread_mutex_unlock(&mutexColaPacientes);
+				pthread_mutex_unlock(&mutexColaPacientes);
+
 				pthread_mutex_lock(&mutexLog);
 				writeLogMessage("Paciente", paciente.ID, "Me marcho del estudio.");
                	pthread_mutex_unlock(&mutexLog);
@@ -441,6 +440,8 @@ void *accionesPaciente(void *arg){
 
 		pthread_mutex_lock(&mutexColaPacientes);
 
+		printf("Estoy en el mutex de pacientes 8\n");
+
 		if(colaPacientes[paciente.Posicion+1].ID!=0){
 
 			colaPacientes[i].ID = 0;
@@ -457,7 +458,6 @@ void *accionesPaciente(void *arg){
 				}
 			}
 		}
-				
 		pthread_mutex_unlock(&mutexColaPacientes);
 
 	}
