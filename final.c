@@ -234,6 +234,7 @@ void *accionesPaciente(void *arg){
 
 	Pacientes paciente = *((Pacientes *)arg);
 
+	bool salirWhile;
 	int aleatorio, aleatorio2, aleatorio3, aleatorio4, i, posici;   //Calculamos el aleatorio para saber si se cansa de esperar
 	 //Calculamos el aleatorio para saber si se lo piensa mejor
 	 //Calculamos el aleatorio del 70 por ciento que queda para saber si se va al baño EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
@@ -341,20 +342,22 @@ void *accionesPaciente(void *arg){
 			sleep(3);
 
 		}
-		
-		while(1){ //Esperamos a que haya sido atendido
+		salirWhile =false;
+		while(salirWhile == false){ //Esperamos a que haya sido atendido
 			pthread_mutex_lock(&mutexColaPacientes);
-			if(colaPacientes[i].Atendido != 2){
+			if(colaPacientes[i].Atendido == 2){
+				printf("Vamos a comprobar la reaccion\n");
 				pthread_mutex_unlock(&mutexColaPacientes);
 				sleep(1);
+				salirWhile = true;
 			}
 		}
-
-		
 		
 		aleatorio4 = calculaAleatorios(0, 100);
 
 		if(aleatorio4 <= 10){ //Miramos a ver si le da reaccion
+
+
 
 			pthread_mutex_lock(&mutexLog);
 			writeLogMessage("Paciente", paciente.ID, "El paciente ha tenido reaccion.");
@@ -473,7 +476,7 @@ void *accionesPaciente(void *arg){
 
 }
 
-void *accionesEnfermero(void *arg){
+void *accionesEnfermero(void *arg){/*
 
 	printf("accionesE\n");
 
@@ -545,6 +548,8 @@ void *accionesEnfermero(void *arg){
                         writeLogMessage("Enfermero", enfermero.ID, "Finaliza la actividad por...");//Varios tipos*****************************************
                         pthread_mutex_unlock(&mutexLog);
 
+                        printf("\n");
+
                         pthread_mutex_lock(&mutexColaPacientes);
 		                colaPacientes[i].Atendido = 2; //Ya ha sido atentido
 		                pthread_mutex_unlock(&mutexColaPacientes);
@@ -614,6 +619,11 @@ void *accionesEnfermero(void *arg){
 
 		                i++;
 					}//fin while(distinto tipo de paciente)
+
+					if(pacienteAtendido == false){
+						 pthread_mutex_unlock(&mutexColaPacientes);
+					}
+
 
 				}//fin if(no se ha encontrado paciente del mismo tipo)
 
@@ -758,6 +768,10 @@ void *accionesEnfermero(void *arg){
 		                i++;
 					}//fin while(distinto tipo de paciente)
 
+					if(pacienteAtendido == false){
+						 pthread_mutex_unlock(&mutexColaPacientes);
+					}
+
 				}//fin if(no se ha encontrado paciente del mismo tipo)
 
 					//Miramos a ver si se tiene que ir a tomar café
@@ -900,6 +914,11 @@ void *accionesEnfermero(void *arg){
 
 		                i++;
 					}//fin while(distinto tipo de paciente)
+
+					if(pacienteAtendido == false){
+						 pthread_mutex_unlock(&mutexColaPacientes);
+					}
+
 				}//fin if(no se ha encontrado paciente del mismo tipo)
 
 				//Miramos a ver si se tiene que ir a tomar café
@@ -917,7 +936,7 @@ void *accionesEnfermero(void *arg){
         	}
 		}//fin enfermero 2
 
-	}//Fin while 1
+	}//Fin while 1*/
 
 }//FIN METODO
 
