@@ -60,7 +60,6 @@ int calculaColaMasGrande();
 
 int main(int argc, char *argv[]){
 
-	printf("main\n");
 
 	struct sigaction pacienteJunior, pacienteMedio, pacienteSenior, terminar;//, terminar
 
@@ -118,8 +117,6 @@ int main(int argc, char *argv[]){
         pause();
     }
 
-    printf("NARANJA\n");
-
     pthread_exit(NULL);
 }
 
@@ -130,8 +127,6 @@ void inicializarEnfermeros(int nEnfermeros){
 	for(i = 0; i<nEnfermeros; i++){
 
 		pthread_mutex_lock(&mutexColaEnfermero);
-
-		printf("He muteado la cola en inicializar_ENFERMERO\n");
 
 		if(i == 0){
 
@@ -160,14 +155,10 @@ void inicializarEnfermeros(int nEnfermeros){
 
 void nuevoPaciente(int signal){
 
-	printf("nuevoP\n");
-
 	int i = 0, j;
 	bool anyadido = false;
 
 	pthread_mutex_lock(&mutexColaPacientes);
-
-	printf("He muteado la cola en nuevo_PACIENTE\n");
 
 	while(i<=nPacientes && anyadido == false){
 		
@@ -230,8 +221,6 @@ void nuevoPaciente(int signal){
 
 void *accionesPaciente(void *arg){
 
-	printf("accionesP\n");
-
 	Pacientes paciente = *((Pacientes *)arg);
 
 	bool salirWhile;
@@ -241,8 +230,6 @@ void *accionesPaciente(void *arg){
 	//Calculamos si el Paciente tiene reaccion
 
 	pthread_mutex_lock(&mutexLog);
-
-	printf("He entrado en el mutex de accionesP\n");
 
 	char mensaje[100] = "El paciente es de tipo: ";
 
@@ -268,11 +255,7 @@ void *accionesPaciente(void *arg){
 	
 	sleep(3);
 
-	printf("TOMATE\n");
-
 	pthread_mutex_lock(&mutexColaPacientes);
-
-	printf("PACIENTE atendido: %d, ID: %d\n", paciente.Atendido, paciente.ID);
 
 	while(paciente.Atendido == 6 && paciente.ID != 0){
 		
@@ -282,7 +265,6 @@ void *accionesPaciente(void *arg){
 		aleatorio2 = calculaAleatorios(0, 100);
 		aleatorio3 = calculaAleatorios(0, 100);
 
-		printf("PRUEBA\n");
 		if(aleatorio <=20 || aleatorio2 <= 10){ //Se van por cansancio o se lo piensa mejor  20 10 
 
 			pthread_mutex_lock(&mutexLog);
@@ -291,13 +273,9 @@ void *accionesPaciente(void *arg){
 
 			//pthread_mutex_lock(&mutexColaPacientes);
 
-			printf("He muteado la cola en PACIENTES\n");
-
 			//Se libea el espacio de la cola, porque si el ID esta a 0 es como si no estuviera		
 
 			posici = paciente.Posicion;
-
-			printf("%d\n", posici);
 
             for (i = posici; i < nPacientes; i++)
             {
@@ -307,7 +285,6 @@ void *accionesPaciente(void *arg){
             colaPacientes[nPacientes - 1].ID = 0;	
 	
 			pthread_mutex_unlock(&mutexColaPacientes);
-			printf("PRUEBA 2\n");
 
 			pthread_exit(NULL);
 
@@ -320,8 +297,6 @@ void *accionesPaciente(void *arg){
             	pthread_mutex_unlock(&mutexLog);
 
 				pthread_mutex_lock(&mutexColaPacientes);
-
-				printf("He muteado la cola en PACIENTES 3\n");
 
 				//Se libea el espacio de la cola, porque si el ID esta a 0 es como si no estuviera	
 			for (i = posici; i < nPacientes; i++)
@@ -352,7 +327,7 @@ void *accionesPaciente(void *arg){
 
 			pthread_mutex_lock(&mutexColaPacientes);
 			if(colaPacientes[i].Atendido == 2){
-				printf("Vamos a comprobar la reaccion\n");
+				colaPacientes[i].ID = 0;
 				pthread_mutex_unlock(&mutexColaPacientes);
 				salirWhile = true;		
 
@@ -386,10 +361,8 @@ void *accionesPaciente(void *arg){
 
 			pthread_mutex_lock(&mutexColaPacientes);
 
-			printf("He muteado la cola en PACIENTES 4\n");
-
 			colaPacientes[i].Atendido = 4;
-			printf("ID: %d, atendido: %d\n", paciente.ID, paciente.Atendido);
+
 			pthread_mutex_unlock(&mutexColaPacientes);
 
 			while(paciente.Atendido != 5){ //espera a que haya sido atendido por el medico
@@ -404,16 +377,12 @@ void *accionesPaciente(void *arg){
 			
 			pthread_mutex_lock(&mutexColaPacientes);////////////////////////////////////////////////////////////////////////////////7
 
-			printf("He muteado la cola en PACIENTES 5\n");
-
 			colaPacientes[i].Atendido = 3;
 			//pthread_mutex_unlock(&mutexColaPacientes);
 
 			if(calculaAleatorios(0, 100) <= 100){ //Calculamos si decide participar en el estudio
 
 				//pthread_mutex_lock(&mutexColaPacientes);
-
-				printf("He muteado la cola en PACIENTES 6\n");
 
 				colaPacientes[i].Serologia = 1;
 				pthread_mutex_unlock(&mutexColaPacientes);
@@ -425,13 +394,13 @@ void *accionesPaciente(void *arg){
 				writeLogMessage("Paciente", paciente.ID, "Estoy listo para el estudio.");
                	pthread_mutex_unlock(&mutexLog);
 
-               	printf("----------1\n");
+
 				pthread_cond_wait(&condMarchar,&mutexColaPacientes);
-				printf("----------2\n");
+
 				pthread_mutex_unlock(&mutexEstadistico);
-				printf("----------3\n");
+
 				pthread_mutex_unlock(&mutexColaPacientes);
-				printf("----------4\n");
+
 				pthread_mutex_lock(&mutexLog);
 				writeLogMessage("Paciente", paciente.ID, "Me marcho del estudio.");
                	pthread_mutex_unlock(&mutexLog);
@@ -451,13 +420,6 @@ void *accionesPaciente(void *arg){
 
 			}else{
 
-				//pthread_mutex_lock(&mutexColaPacientes);
-
-				printf("He muteado la cola en PACIENTES 7\n");
-
-				
-				//pthread_mutex_unlock(&mutexColaPacientes);
-
 				pthread_mutex_lock(&mutexLog);
 				writeLogMessage("Paciente", paciente.ID, "No participo en el estudio asique me voy.");
             	pthread_mutex_unlock(&mutexLog);
@@ -475,16 +437,9 @@ void *accionesPaciente(void *arg){
 
 			}
 		
-			//pthread_mutex_unlock(&mutexColaPacientes);
 		}
 
-		//pthread_mutex_lock(&mutexColaPacientes);
-
-		printf("He muteado la cola en PACIENTES 8\n");
-
 		pthread_mutex_lock(&mutexColaPacientes);
-
-		printf("Estoy en el mutex de pacientes 8\n");
 
 		if(colaPacientes[paciente.Posicion+1].ID!=0){
 
@@ -516,7 +471,6 @@ void *accionesPaciente(void *arg){
 
 void *accionesEnfermero(void *arg){
 
-	printf("accionesE\n");
 
 	Enfermero enfermero = *((Enfermero *)arg);
 
@@ -531,13 +485,10 @@ void *accionesEnfermero(void *arg){
 	while(1){
 
 		if(enfermero.ID == 0){//preguntamos en que enfermero estamos
-			//if(colaPacientes[0].ID != 0){
-			
+
 			pthread_mutex_lock(&mutexColaPacientes);
 
 			if(colaPacientes[0].ID != 0){
-
-				//printf("ESTAMO ACTIVO BBY enfermero 0 mismo\n");
 
 				i = 0;
 				encontrado = false;
@@ -596,13 +547,9 @@ void *accionesEnfermero(void *arg){
 	                        writeLogMessage("Enfermero", enfermero.ID, "He terminado de vacunar.");
 	                        pthread_mutex_unlock(&mutexLog);
 
-	                         printf("CALABAZIN\n");
-
 	                        pthread_mutex_lock(&mutexColaPacientes);
 			                colaPacientes[i].Atendido = 2; //Ya ha sido atentido
 			                pthread_mutex_unlock(&mutexColaPacientes);
-
-			                printf("ALBARICOQUE\n");
 
 			                enfermero.nPacientes++;
 
@@ -619,14 +566,10 @@ void *accionesEnfermero(void *arg){
 					
 					pacienteAtendido = false;
 
-					//printf("ESTAMO ACTIVO BBY enfermero 0 diferente\n");
-
 					while(i < nPacientes && colaPacientes[i].ID != 0 && pacienteAtendido == false){
 						if(colaPacientes[i].Atendido == 0){
 							distintoTipo = true;
 							pacienteAtendido = true;
-
-							printf("He muteado la cola en ENFERMERO\n");
 
 							colaPacientes[i].Atendido = 1; //Esta siendo atentido
 
@@ -721,8 +664,6 @@ void *accionesEnfermero(void *arg){
 
 			if(colaPacientes[0].ID != 0){
 
-				//printf("ESTAMO ACTIVO BBY enfermero 1 mismo\n");
-
 				i = 0;
 				encontrado = false;
 
@@ -799,14 +740,10 @@ void *accionesEnfermero(void *arg){
 					
 					pacienteAtendido = false;
 
-					//printf("ESTAMO ACTIVO BBY enfermero 1 diferente\n");
-
 					while(i < nPacientes && colaPacientes[i].ID != 0 && pacienteAtendido == false){
 						if(colaPacientes[i].Atendido == 0){
 							distintoTipo = true;
 							pacienteAtendido = true;
-
-							printf("He muteado la cola en ENFERMERO\n");
 
 							colaPacientes[i].Atendido = 1; //Esta siendo atentido
 
@@ -854,7 +791,6 @@ void *accionesEnfermero(void *arg){
 
 		                        pthread_mutex_lock(&mutexColaPacientes);
 				                colaPacientes[i].Atendido = 2; //Ya ha sido atentido
-				                printf("He cambiado el atendido a 2\n");
 				                pthread_mutex_unlock(&mutexColaPacientes);
 
 				                enfermero.nPacientes++;
@@ -899,8 +835,6 @@ void *accionesEnfermero(void *arg){
 			if(colaPacientes[0].ID != 0){
 
 				pacienteAtendido = false;
-
-				//printf("ESTAMO ACTIVO BBY enfermero 2 mismo\n");
 				
 				i = 0;
 				encontrado = false;
@@ -975,15 +909,11 @@ void *accionesEnfermero(void *arg){
 					i = 0;
 					
 					pacienteAtendido = false;
-					
-					//printf("ESTAMO ACTIVO BBY enfermero 2 diferente\n");
 
 					while(i < nPacientes && colaPacientes[i].ID != 0 && pacienteAtendido == false){
 						if(colaPacientes[i].Atendido == 0){
 							distintoTipo = true;
 							pacienteAtendido = true;
-
-							printf("He muteado la cola en ENFERMERO\n");
 
 							colaPacientes[i].Atendido = 1; //Esta siendo atentido
 
@@ -1077,8 +1007,6 @@ void *accionesEnfermero(void *arg){
 
 void *accionesMedico(void *arg){
 
-	printf("accionesM\n");
-
 	int i;
 	int tipoAtencion, tiempoEspera, reaccion, masPacientes;
 	bool encontrado;
@@ -1090,7 +1018,6 @@ void *accionesMedico(void *arg){
 		pthread_mutex_lock(&mutexColaPacientes);
 		if(colaPacientes[0].ID != 0)
 		{
-			//printf("accionesM_2\n");
 			//Busco el primer paciente en la cola que ha dado reacción
 			encontrado = false;
 			i = 0;
@@ -1098,7 +1025,6 @@ void *accionesMedico(void *arg){
 			{
 				if(colaPacientes[i].ID != 0 && colaPacientes[i].Atendido == 4)
 				{
-					printf("He muteado la cola en MEDICO\n");
 					encontrado = true;
 				}else
 				{
@@ -1191,8 +1117,6 @@ void *accionesMedico(void *arg){
 		            writeLogMessage("Medico", 1, "He acabado de atender al paciente correctamente");
 					pthread_mutex_unlock(&mutexLog);
 
-					printf("El tiempo de espera es: %d\n", tiempoEspera);
-
 					if(pacienteConReaccion == true)
 					{
 						pthread_mutex_lock(&mutexLog);
@@ -1222,8 +1146,6 @@ void *accionesMedico(void *arg){
 
 void *accionesEstadistico(void *arg){
 
-	printf("accionesEst\n");
-
 	int i;
 	bool pacienteEstudio = false;
 	i = 0;
@@ -1231,17 +1153,15 @@ void *accionesEstadistico(void *arg){
 	while(1)
 	{
 		pthread_mutex_lock(&mutexEstadistico);
-		printf("accionesEst2\n");
+
 		pthread_cond_wait(&condSerologia,&mutexEstadistico);
-		printf("HOLIIII\n");
+
 
 		pthread_mutex_lock(&mutexColaPacientes);
 		while(i < nPacientes && !pacienteEstudio)
 		{
 
 			if(colaPacientes[i].Serologia == 1){
-
-				printf("LANGOSTINO\n");
 
 				pthread_mutex_unlock(&mutexColaPacientes);
 				pacienteEstudio = true;
@@ -1339,6 +1259,18 @@ int calculaColaMasGrande()
 void finalizar(int signal){
 	int i;
 	terminado = 1;
+
+	while(i < nPacientes){
+		pthread_mutex_lock(&mutexColaPacientes);
+		if(colaPacientes[i].ID == 0){
+			i++;
+		}
+		pthread_mutex_unlock(&mutexColaPacientes);
+		sleep(3);
+
+	}
+	exit(0);
+	/*
 	pthread_mutex_lock(&mutexColaPacientes);
 	for(i = 0; i<nPacientes; i++){
 		colaPacientes[i].ID = 0;
@@ -1346,4 +1278,5 @@ void finalizar(int signal){
 	}
 	pthread_mutex_unlock(&mutexColaPacientes);
         exit(0);
+        */
 }
