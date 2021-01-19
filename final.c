@@ -33,7 +33,7 @@ typedef struct{
 
 //Variables
 
-int contadorPacientes, terminado, nPacientes, nEnfermeros;
+int contadorPacientes, terminado, nPacientes;
 pthread_mutex_t mutexLog, mutexColaPacientes, mutexEstadistico, mutexAleatorios, mutexColaEnfermero;
 pthread_cond_t condReaccion, condSerologia, condMarchar;
 
@@ -52,7 +52,7 @@ void *accionesPaciente(void *arg);
 void *accionesEnfermero(void *arg);
 void *accionesMedico(void *arg);
 void *accionesEstadistico(void *arg);
-//void finalizar(int signal);
+void finalizar(int signal);
 void writeLogMessage(char *identifier, int id, char *msg);
 int calculaAleatorios(int min, int max);
 int calculaColaMasGrande();
@@ -62,13 +62,13 @@ int main(int argc, char *argv[]){
 
 	printf("main\n");
 
-	struct sigaction pacienteJunior, pacienteMedio, pacienteSenior;//, terminar
+	struct sigaction pacienteJunior, pacienteMedio, pacienteSenior, terminar;//, terminar
 
 	pacienteJunior.sa_handler = nuevoPaciente;
 	pacienteMedio.sa_handler = nuevoPaciente;
 	pacienteSenior.sa_handler = nuevoPaciente;
 	
-	//terminar.sa_handler = finalizar;
+	terminar.sa_handler = finalizar;
 	sigemptyset(&pacienteJunior.sa_mask);
 	sigemptyset(&pacienteMedio.sa_mask);
 	sigemptyset(&pacienteSenior.sa_mask);
@@ -76,7 +76,7 @@ int main(int argc, char *argv[]){
 	sigaction(SIGUSR1, &pacienteJunior, NULL);	//Manejo SIGUSR1 para los pacientes junior
     sigaction(SIGUSR2, &pacienteMedio, NULL);	//Manejo SIGUSR2 para los pacientes Medios
 	sigaction(SIGPIPE, &pacienteSenior, NULL);	//Manejo SIGPIPE para los pacientes Senior	
-        //sigaction(SIGINT, &terminar, NULL);		//Manejo SIGINT para terminar
+    sigaction(SIGINT, &terminar, NULL);			//Manejo SIGINT para terminar
 
 	//Inicializar Recursos
 	pthread_mutex_init(&mutexLog, NULL);
@@ -91,15 +91,7 @@ int main(int argc, char *argv[]){
 	srand(time(NULL));
 	contadorPacientes = 0;
 	terminado = 0;
-	nPacientes = 0;
-
-	//Comprobamos los argumentos
-
-	if(argc==2) {
-		nPacientes = atoi(argv[1]);
-    }else if(argc == 3){
-    	nEnfermeros = atoi(argv[2]);
-    }
+	nPacientes = 15;
 
 	//Inicializar estructuras a 0
 	int i;	
@@ -151,7 +143,7 @@ void inicializarEnfermeros(int nEnfermeros){
 			colaEnfermero[i].ID = i;
 			colaEnfermero[i].Tipo = 1;
 
-		}else if(i == 2){
+		}else{
 
 			colaEnfermero[i].ID = i;
 			colaEnfermero[i].Tipo = 2;
@@ -900,7 +892,7 @@ void *accionesEnfermero(void *arg){
 	        }else{
 	        	pthread_mutex_unlock(&mutexColaPacientes);
 	        }
-		}else if(enfermero.ID == 2){
+		}else{
 
 			pthread_mutex_lock(&mutexColaPacientes);
 
@@ -1344,7 +1336,7 @@ int calculaColaMasGrande()
 	}
 }
 
-/*void finalizar(int signal){
+void finalizar(int signal){
 	int i;
 	terminado = 1;
 	pthread_mutex_lock(&mutexColaPacientes);
@@ -1354,4 +1346,4 @@ int calculaColaMasGrande()
 	}
 	pthread_mutex_unlock(&mutexColaPacientes);
         exit(0);
-}*/
+}
