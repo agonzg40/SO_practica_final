@@ -14,7 +14,7 @@
 typedef struct{
 
 	int ID;
-	int Atendido; //0 - no, 1 - si esta siendo atendido, 2 - si ya ha sido atendido, 3 - no ha tenido reaccion, 4 - ha tenido reaccion, 5- ha sido atendido con reaccion, 6- esta decidiendo si se queda
+	int Atendido; //0 - no, 1 - si esta siendo atendido, 2 - si ya ha sido atendido, 3 - no ha tenido reaccion, 4 - ha tenido reaccion, 5 - ha sido atendido con reaccion, 6 - esta decidiendo si se queda, 7 - tiene gripe
 	int Tipo; //Edad de los pacientes, 0-15-junior, 16-59-medio, 60-100 senior, 0 - junior, 1 - medio, 2 - senior
 	int Serologia; // 1-Participan, 0-No, 2-Ya participó
 	int Posicion; //Guarda la posicion en la que se encuentra en la cola
@@ -94,7 +94,7 @@ int main(int argc, char *argv[]){
 
 	//Inicializar estructuras a 0
 	int i;	
-	for(i=0; i<nPacientes; i++)//EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE a numero leido
+	for(i=0; i<nPacientes; i++)
 	{
 	
 		colaPacientes[i].ID = 0;
@@ -103,8 +103,6 @@ int main(int argc, char *argv[]){
 		colaPacientes[i].Serologia = 0;
 
 	}
-
-	//EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE ENFERMEROOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOS
 
 	logFile = fopen("registroTiempos.log", "w");
 
@@ -226,7 +224,7 @@ void *accionesPaciente(void *arg){
 	bool salirWhile;
 	int aleatorio, aleatorio2, aleatorio3, aleatorio4, i, posici;   //Calculamos el aleatorio para saber si se cansa de esperar
 	 //Calculamos el aleatorio para saber si se lo piensa mejor
-	 //Calculamos el aleatorio del 70 por ciento que queda para saber si se va al baño EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+	 //Calculamos el aleatorio del 70 por ciento que queda para saber si se va al baño
 	//Calculamos si el Paciente tiene reaccion
 
 	pthread_mutex_lock(&mutexLog);
@@ -270,8 +268,6 @@ void *accionesPaciente(void *arg){
 			pthread_mutex_lock(&mutexLog);
             writeLogMessage("Paciente", paciente.ID, "Se va de la cola, por espera o por cansancio.");
             pthread_mutex_unlock(&mutexLog);
-
-			//pthread_mutex_lock(&mutexColaPacientes);
 
 			//Se libea el espacio de la cola, porque si el ID esta a 0 es como si no estuviera		
 
@@ -381,8 +377,6 @@ void *accionesPaciente(void *arg){
 			//pthread_mutex_unlock(&mutexColaPacientes);
 
 			if(calculaAleatorios(0, 100) <= 100){ //Calculamos si decide participar en el estudio
-
-				//pthread_mutex_lock(&mutexColaPacientes);
 
 				colaPacientes[i].Serologia = 1;
 				pthread_mutex_unlock(&mutexColaPacientes);
@@ -517,7 +511,7 @@ void *accionesEnfermero(void *arg){
 						}else if(tipoAtencion > 80 && tipoAtencion <= 90)
 						{
 							tiempoEspera = calculaAleatorios(2, 6);
-						//Tiene catarro o gripe-------------------------------------------------------------------------------------------------------------------
+						//Tiene catarro o gripe
 						}else
 						{
 							tiempoEspera = calculaAleatorios(6, 10);
@@ -618,8 +612,6 @@ void *accionesEnfermero(void *arg){
 				                colaPacientes[i].Atendido = 2; //Ya ha sido atentido
 				                pthread_mutex_unlock(&mutexColaPacientes);
 
-				                //pthread_mutex_unlock(&mutexColaPacientes);//desbloqueamos al paciente
-
 				                enfermero.nPacientes++;
 				            }else{
 				            	pthread_mutex_unlock(&mutexColaPacientes);
@@ -658,7 +650,6 @@ void *accionesEnfermero(void *arg){
 			//fin enfermero 0
 		}else if(enfermero.ID == 1){
 
-			//if(colaPacientes[0].ID != 0){
 			pthread_mutex_lock(&mutexColaPacientes);
 			pacienteAtendido = false;
 
@@ -962,8 +953,6 @@ void *accionesEnfermero(void *arg){
 		                        pthread_mutex_lock(&mutexColaPacientes);
 				                colaPacientes[i].Atendido = 2; //Ya ha sido atentido
 				                pthread_mutex_unlock(&mutexColaPacientes);
-
-				               // pthread_mutex_unlock(&mutexColaPacientes);//desbloqueamos al paciente
 
 				                enfermero.nPacientes++;
 
